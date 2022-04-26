@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 {
 
     initClk();
-   
+    char bufferion[20];
     // initialization that is expected from ProcessGenerator:
     int Algorithm_type = 3; // atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
     int Nprocesses = 3;     // atoi(argv[1]);
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
             if (pid == 0) //the child joins the cult of processes
             {
                 // calculate remaining time:
-                char *args[] = {"./process", atoi(remaining_time), NULL};
+                char *args[] = {"./process", my_itoa(remaining_time,bufferion), NULL};
                 execvp(args[0], args);
             }
             //immediately put the child to good sleep C: 

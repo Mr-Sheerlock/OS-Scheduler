@@ -22,6 +22,17 @@ typedef short bool;
 #define SHKEY 300
 
 
+char *my_itoa(int num, char *str)
+{
+        if(str == NULL)
+        {
+                return NULL;
+        }
+        sprintf(str, "%d", num);
+        return str;
+}
+
+
 ///==============================
 //don't mess with this variable//
 int * shmaddr;                 //

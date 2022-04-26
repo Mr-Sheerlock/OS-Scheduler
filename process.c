@@ -13,7 +13,7 @@ int main(int agrc, char * argv[])
     //TODO it needs to get the remaining time from somewhere
     
   
-    remainingtime = argv[1];
+    remainingtime = atoi(argv[1]);
     while (remainingtime > 0)
     {
         remainingtime--;

@@ -2,12 +2,12 @@
 
 struct PCB
 {
-    bool state = 0; // 0 for waiting, 1 for running
+    bool state; // 0 for waiting, 1 for running
     int remaining_time;
     int waiting_time;
     int execution_time;
 
-}
+}PCB_def={0,0,0,0};
 
 struct proc
 {
@@ -38,9 +38,9 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < Nprocesses; i++)
     {
-        PCBArr[count].state = 0; // waiting by default
-        PCBArr[count].execution_time = 0;
-        PCBArr[count].waiting_time = 0;
+        PCBArr[i].state = 0; // waiting by default
+        PCBArr[i].execution_time = 0;
+        PCBArr[i].waiting_time = 0;
     }
 
     // Initialize when needed
@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     struct Node *node;
     struct PNode *PQ_node;
 
+    //THIS PART IS PG responsibility
     if (Algorithm_type == 1) // SJF
     {
         Process_PQueue = CreatePQueue();
@@ -88,7 +89,8 @@ int main(int argc, char *argv[])
 
         /* receive all types of messages */
         // rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg)-sizeof(PG_msgbuff.mtype), 0, !IPC_NOWAIT);
-        rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg) - sizeof(PG_msgbuff.mtype), PG_msgbuff.mtype, !IPC_NOWAIT);
+        //sizeof(long) is the size of mtype
+        rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg) - sizeof(long), snt_Process_msg.mtype, !IPC_NOWAIT);
 
         if (rec_val == -1)
             ; // pass
@@ -97,7 +99,7 @@ int main(int argc, char *argv[])
             // calculate remaining time for process
             if (Algorithm_type < 3)
             {
-                remaining_time = snt_Process_msg.Runtime;
+                remaining_time = snt_Process_msg.Process.Runtime;
             }
             else if (Algorithm_type == 3)
             {
@@ -120,7 +122,7 @@ int main(int argc, char *argv[])
                 execvp(args[0], args);
             }
             //immediately put the child to good sleep C: 
-            kill(pid,SIGSTP); // SIGSTP=19
+            kill(pid,SIGSTOP); // SIGSTP=19
         }
         // 2.Switch between two processes according to the scheduling algorithm. (stop
         // the old process and save its state and start/resume another one.)
@@ -146,12 +148,14 @@ int main(int argc, char *argv[])
 
             node=CDequeue(Process_CQueue);
             pid=node->PID;
+
+            //CALCULATE THINGS in PCB
             kill(pid,SIGCONT);// SIGCONT=18
 
             sleep(quantum);
             
-            kill(pid,SIGSTP);// SIGSTP=19
-
+            kill(pid,SIGSTOP);// SIGSTOP=19
+            //CALCULATE THINGS in PCB
 
         }
         else if (Algorithm_type == 4)//MultilevelQ

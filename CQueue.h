@@ -16,16 +16,9 @@ typedef short bool;
 #define true 1
 #define false 0
 
-//MIGHT CAUSE DOUBLE DEFINITIONS, CHECK LATER
-struct Node 
-{
-    struct Node *Next;
-    //Input File Data
-    int PID;
-    int Priority;
-    int Arrival_Time;
-    int Runtime;
-};
+
+struct Node;
+
 
 
 struct CQueue
@@ -66,7 +59,7 @@ struct Node* CDequeue(struct CQueue *Q)
     //loop till you reach the end of the CQueue
     while(Temp->Next != Q->Header)
     {
-        ptr = ptr->Next;
+        Temp = Temp->Next;
     }
     Temp->Next = Q->Header->Next;
 
@@ -85,12 +78,6 @@ struct Node* CPeek(struct CQueue *Q)
     return Temp;
 }
 
-struct Node* CreateNode()
-{
-    struct Node *Temp = (struct Node*)malloc(sizeof(struct Node));
-    Temp->Next = NULL;
-    return Temp;
-}
 
 struct CQueue* CreateCQueue()
 {

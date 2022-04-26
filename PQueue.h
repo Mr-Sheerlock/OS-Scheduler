@@ -21,8 +21,8 @@ struct PNode
     struct PNode *Next;
     int Q_Priority; //different from one algorithm to another
     //Input File Data
+    int PID;
     int Priority;
-    int ID;
     int Arrival_Time;
     int Runtime;
 };

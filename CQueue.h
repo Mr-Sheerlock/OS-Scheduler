@@ -16,6 +16,7 @@ typedef short bool;
 #define true 1
 #define false 0
 
+//MIGHT CAUSE DOUBLE DEFINITIONS, CHECK LATER
 struct Node 
 {
     struct Node *Next;
@@ -27,15 +28,15 @@ struct Node
 };
 
 
-struct Queue
+struct CQueue
 {
     struct Node *Header;
 };
 
-void Enqueue(struct Queue *Q ,struct Node *NewNode)
+void CEnqueue(struct CQueue *Q ,struct Node *NewNode)
 {
     struct Node *Temp = NewNode;
-    Temp->Next = NULL;
+    Temp->Next = Q->Header;
     if(Q->Header == NULL) //If Empty
     {
         Q->Header = Temp;
@@ -43,16 +44,16 @@ void Enqueue(struct Queue *Q ,struct Node *NewNode)
         return;
     }
 
-    //if not empty, loop till you reach the end of the queue
+    //if not empty, loop till you reach the end of the CQueue
     struct Node *ptr = Q->Header;
-    while(ptr->Next != NULL)
+    while(ptr->Next != Q->Header)
     {
         ptr = ptr->Next;
     }
     ptr->Next = Temp;
 }
 
-struct Node* Dequeue(struct Queue *Q)
+struct Node* CDequeue(struct CQueue *Q)
 {
     //If empty
     if(!Q->Header)
@@ -61,11 +62,19 @@ struct Node* Dequeue(struct Queue *Q)
     }
     //If not empty
     struct Node *Temp = Q->Header;
+
+    //loop till you reach the end of the CQueue
+    while(Temp->Next != Q->Header)
+    {
+        ptr = ptr->Next;
+    }
+    Temp->Next = Q->Header->Next;
+
     Q->Header = Temp->Next;
     return Temp;
 }
 
-struct Node* Peek(struct Queue *Q)
+struct Node* CPeek(struct CQueue *Q)
 {
     //If empty
     if(!Q->Header)
@@ -83,9 +92,9 @@ struct Node* CreateNode()
     return Temp;
 }
 
-struct Queue* CreateQueue()
+struct CQueue* CreateCQueue()
 {
-    struct Queue *Temp = (struct Queue *)malloc(sizeof(struct Queue));
+    struct CQueue *Temp = (struct CQueue *)malloc(sizeof(struct CQueue));
     Temp->Header = NULL;
     return Temp;
 }

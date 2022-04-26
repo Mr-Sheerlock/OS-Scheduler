@@ -11,6 +11,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <queue.h>
+#include <Pqueue.h>
+#include <Cqueue.h>
 
 typedef short bool;
 #define true 1

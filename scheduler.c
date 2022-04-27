@@ -23,7 +23,7 @@ struct PG_msgbuff
     struct proc Process;
 };
 
-int Nprocesses = 3;   
+int Nprocesses;   
 
 struct PCB* findPCB(int id, struct PCB* pcb){
     for(int i=0;i<Nprocesses;i++){
@@ -39,16 +39,18 @@ struct PCB* findPCB(int id, struct PCB* pcb){
 int main(int argc, char *argv[])
 {
 
-    FILE *fileptr;
-	fileptr = fopen("scheduler.log", "w");
+    FILE *logptr;
+    FILE *perfptr;
+	logptr = fopen("scheduler.log", "w");
+	perfptr = fopen("scheduler.perf", "w");
 
 
     initClk();
     char bufferion[20];
     // initialization that is expected from ProcessGenerator:
-    int Algorithm_type = 3; // atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
-    // int Nprocesses=atoi(argv[1]);
-    int quantum=2; //atoi(argv[2])
+    int Algorithm_type= atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
+    int quantum=atoi(argv[1]);
+    Nprocesses=atoi(argv[2]);
 
     // int PIDArr[Nprocesses]; //MIGHT BE REPLACED BY A QUEUE
     struct PCB PCBArr[Nprocesses];
@@ -170,11 +172,11 @@ int main(int argc, char *argv[])
             //output first
             if (pcb->state == -1)
             {
-                fprintf(fileptr,"At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
             }
             else
             {
-                fprintf(fileptr,"At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
             }
             kill(pid,SIGCONT);// SIGCONT=18
 
@@ -189,11 +191,11 @@ int main(int argc, char *argv[])
             
             if(pcb->remaining_time==0){
                 ;//Output & Delete
-                fprintf(fileptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
+                fprintf(logptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
                 
                 //DON'T FORGET TO DELETE
             }else{
-                fprintf(fileptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
                 CEnqueue(Process_CQueue,node);
             }
 
@@ -217,16 +219,19 @@ int main(int argc, char *argv[])
         // a) CPU utilization.
         // b) Average Weighted Turnaround Time 
         // c) Average Waiting Time 
-        // 6.Generate two files: (check the input/output section
-        // below)(a)Scheduler.log
-        // (b) Scheduler.perf 
+        
+        
 
     }
 
-    // msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+    // 6.Generate two files: (check the input/output section
+    // below)(a)Scheduler.log
+    // (b) Scheduler.perf 
+    
 
+    fclose(logptr);
+    fclose(perfptr);
     // upon termination release the clock resources.
-    fclose(fileptr);
     destroyClk(true);
 
 

@@ -79,4 +79,5 @@ void destroyClk(bool terminateAll)
     {
         killpg(getpgrp(), SIGINT);
     }
+    return;
 }

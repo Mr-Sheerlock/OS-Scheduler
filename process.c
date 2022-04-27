@@ -1,4 +1,4 @@
-#include "headers.h"
+#include"headers.h"
 
 /* Modify this file as needed*/
 int remainingtime;
@@ -19,9 +19,11 @@ int main(int agrc, char * argv[])
         remainingtime--;
     }
     
+    destroyClk(false);
+    
    return 0;
 }
 
-    destroyClk(false);
+
     
  

@@ -39,33 +39,27 @@ struct PCB* findPCB(int id, struct PCB* pcb){
 int main(int argc, char *argv[])
 {
 
-    FILE *logptr;
-    FILE *perfptr;
-	logptr = fopen("scheduler.log", "w");
-	perfptr = fopen("scheduler.perf", "w");
-
-
-    initClk();
-    char bufferion[20];
-    // initialization that is expected from ProcessGenerator:
+    // initialization from ProcessGenerator:
     int Algorithm_type= atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
     int quantum=atoi(argv[1]);
     Nprocesses=atoi(argv[2]);
 
-    // int PIDArr[Nprocesses]; //MIGHT BE REPLACED BY A QUEUE
-    struct PCB PCBArr[Nprocesses];
+    initClk();
+
+
+    //Process Table
+    struct PCB ProcessTable[Nprocesses];
     struct PCB* pcb;
     
 
-    // Initialize when needed
+    //Data Structures that are initialized when needed according to algorithm
     struct Queue* Process_Queue;
     struct PQueue* Process_PQueue;
     struct CQueue* Process_CQueue; // for RR
-
     struct Node *node;
     struct PNode *PQ_node;
-
-    //THIS PART IS PG responsibility
+    
+    #pragma region DS INIT
     if (Algorithm_type == 1) // SJF
     {
         Process_PQueue = CreatePQueue();
@@ -81,19 +75,34 @@ int main(int argc, char *argv[])
     else if (Algorithm_type == 4) // MultilevelQ
     {
     }
+    #pragma endregion
+    
 
-    int count=0;
+    //some variables used inside
+    int count=0;  
     int remaining_time;
     int pid;
+
+    //for Perf
+    int Total_Execution_Time=0;
+    int Total_Waiting_Time=0;
+    int First_Arrival_Time=1;
     // for Process Generator Communication
     key_t key_id;
     int rec_val, msgq_id;
-
     key_id = ftok("dummy", 65);
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
 
-    // TODO implement the scheduler :)
+    //for Process.c initial Communication
+    char bufferion[20]; //buffer for integer to char conversion
+    
+    //For Output
+    FILE *logptr;
+    FILE *perfptr;
+	logptr = fopen("scheduler.log", "w");
+	perfptr = fopen("scheduler.perf", "w");
 
+    // TODO implement the scheduler :)
     //     1.Start a new process whenever it arrives. (Fork it and give it its parameters)
 
     // recieve from generator:
@@ -110,6 +119,9 @@ int main(int argc, char *argv[])
             ; // pass
         else
         {
+            if(count==0){
+                First_Arrival_Time=snt_Process_msg.Process.ArrivalTime;
+            }
             // calculate remaining time for process
             if (Algorithm_type < 3)
             {
@@ -124,7 +136,7 @@ int main(int argc, char *argv[])
                 // remaining_time = snt_Process_msg.Runtime+7aga akeed akbar;
             }
             //update the PCB with remaining time
-            PCBArr[count].remaining_time = remaining_time;
+            ProcessTable[count].remaining_time = remaining_time;
 
             // fork the process
             // PIDArr[count] = fork();
@@ -137,7 +149,7 @@ int main(int argc, char *argv[])
             }
             //immediately put the child to good sleep C: 
             kill(pid,SIGSTOP); // SIGSTP=19
-            PCBArr[count].id= pid;
+            ProcessTable[count].id= pid;
             count++;
         }
         // 2.Switch between two processes according to the scheduling algorithm. (stop
@@ -164,9 +176,10 @@ int main(int argc, char *argv[])
 
             node=CDequeue(Process_CQueue);
             pid=node->PID;
-            pcb=findPCB(pid, PCBArr);
+            pcb=findPCB(pid, ProcessTable);
             //how to get waiting???? 
             pcb->waiting_time+=(getClk()-node->Arrival_Time) -pcb->execution_time;
+            Total_Waiting_Time+=pcb->waiting_time;
             node->Runtime;
             
             //output first
@@ -189,11 +202,17 @@ int main(int argc, char *argv[])
             pcb->execution_time+=quantum;
             pcb->state=0;
             
+            Total_Execution_Time+=quantum;
+
             if(pcb->remaining_time==0){
                 ;//Output & Delete
                 fprintf(logptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
                 
-                //DON'T FORGET TO DELETE
+                //Delete data
+                pcb->execution_time=0;
+                pcb->remaining_time=0;
+                pcb->waiting_time=0;
+                pcb->id=-1;
             }else{
                 fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
                 CEnqueue(Process_CQueue,node);
@@ -226,8 +245,11 @@ int main(int argc, char *argv[])
 
     // 6.Generate two files: (check the input/output section
     // below)(a)Scheduler.log
+
     // (b) Scheduler.perf 
-    
+    fprintf(perfptr,"CPU utilization = %.2f%%Avg\n",(float)(Total_Execution_Time/getClk()));    
+    fprintf(perfptr,"WTA=%.2f\n",(float)((getClk()-First_Arrival_Time)/Total_Execution_Time));    
+    fprintf(perfptr,"Avg Waiting = %.2f\n",(float)(Total_Waiting_Time/Nprocesses));    
 
     fclose(logptr);
     fclose(perfptr);

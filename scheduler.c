@@ -36,17 +36,18 @@ struct PCB* findPCB(int id, struct PCB* pcb){
 }
 
 
-//      ./process_generator.out testcase.txt -sch 3 -q 1 &
-//      ./process_generator.out testcase.txt -sch 5 -q 2 &
+//      make; ./process_generator.out testcase.txt -sch 3 -q 1 &
+//     make; ./process_generator.out testcase.txt -sch 5 -q 2 &
 
 int main(int argc, char *argv[])
 {
 
    
     // initialization from ProcessGenerator:
-    int Algorithm_type= atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
-    int quantum=atoi(argv[1]);
-    Nprocesses=atoi(argv[2]);
+    int Algorithm_type= atoi(argv[1]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
+    int quantum=atoi(argv[2]);
+    Nprocesses=atoi(argv[3]);
+
     
     //it doesn't reach here 
     initClk();
@@ -119,11 +120,12 @@ int main(int argc, char *argv[])
         // rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg)-sizeof(PG_msgbuff.mtype), 0, !IPC_NOWAIT);
         //sizeof(long) is the size of mtype
         rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg) - sizeof(long), snt_Process_msg.mtype, !IPC_NOWAIT);
-
-        if (rec_val == -1)
-            ; // pass
-        else
-        {
+        if (rec_val != -1)
+        {   
+            printf("Current Time is %d\n",getClk());
+            //in case of message recieval
+            printf("\nrec_val is %d\n", rec_val);
+            printf("What I recieved is id %d and arrival %d and runtime %d\n", snt_Process_msg.Process.pid, snt_Process_msg.Process.ArrivalTime,snt_Process_msg.Process.Runtime);
             if(count==0){
                 First_Arrival_Time=snt_Process_msg.Process.ArrivalTime;
             }
@@ -144,15 +146,26 @@ int main(int argc, char *argv[])
             ProcessTable[count].remaining_time = remaining_time;
 
             // fork the process
-            // PIDArr[count] = fork();
+            
             pid=fork();
+            fflush(stdout);
+            printf("pid is %d\n",pid);
+            // printf("lolerforker\n");
+                        //      make; ./process_generator.out testcase.txt -sch 3 -q 1 &
+                        //    A messing AROUND TEST  make; ./process_generator.out testcase.txt -sch 5 -q 2 &
+
             if (pid == 0) //the child joins the cult of processes
             {
-                // calculate remaining time:
-                char *args[] = {"./process", my_itoa(remaining_time,bufferion), NULL};
+                fflush(stdout);
+                printf("\n I pregnarted a child\n");
+                
+                my_itoa(remaining_time,bufferion);
+                char *args[] = {"./process.out", bufferion, NULL};
+                
                 execvp(args[0], args);
             }
             //immediately put the child to good sleep C: 
+            printf("before the kill");
             kill(pid,SIGSTOP); // SIGSTP=19
             ProcessTable[count].id= pid;
             count++;

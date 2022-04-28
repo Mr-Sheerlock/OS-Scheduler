@@ -115,7 +115,6 @@ int main(int argc, char *arg[])
     //      ./process_generator.out testcase.txt -sch 5 -q 2 &
     //doesn't reach here
     int clkpid=fork();
-    printf("\nCLKP IS %d\n",clkpid);
     if(!clkpid)
     {
         printf("Before initializing  clock in PG!");
@@ -128,8 +127,8 @@ int main(int argc, char *arg[])
 
     //? 4. Use this function after creating the clock process to initialize clock.
     initClk();   // Attach to Clock
-    int x = getClk();
-    printf("Current Time is %d\n", x);
+    // int x = getClk();
+    // printf("Current Time is %d\n", x);
 
     //? 6. Send the information to the scheduler at the appropriate time.
     // TODO Generation Main Loop
@@ -147,7 +146,7 @@ int main(int argc, char *arg[])
             //printf("Sent %d\n",dequeue(&ProcessQueue)->process->pid);
         }
     }
-    sleep(1);
+    sleep(9);
     //kill(schedulerpid,SIGKILL);
     // 7. Clear clock resources
     destroyClk(true);

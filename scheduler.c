@@ -15,6 +15,7 @@ struct proc
     int ArrivalTime;
     int Runtime;
     int Priority;
+    int SchPriority;
 };
 
 struct PG_msgbuff
@@ -35,15 +36,19 @@ struct PCB* findPCB(int id, struct PCB* pcb){
 }
 
 
+//      ./process_generator.out testcase.txt -sch 3 -q 1 &
+//      ./process_generator.out testcase.txt -sch 5 -q 2 &
 
 int main(int argc, char *argv[])
 {
 
+   
     // initialization from ProcessGenerator:
     int Algorithm_type= atoi(argv[0]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
     int quantum=atoi(argv[1]);
     Nprocesses=atoi(argv[2]);
-
+    
+    //it doesn't reach here 
     initClk();
 
 
@@ -77,7 +82,7 @@ int main(int argc, char *argv[])
     }
     #pragma endregion
     
-
+     
     //some variables used inside
     int count=0;  
     int remaining_time;

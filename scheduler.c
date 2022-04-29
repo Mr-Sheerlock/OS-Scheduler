@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     //Data Structures that are initialized when needed according to algorithm
     struct Queue* Process_Queue;
     struct PQueue* Process_PQueue;
-    struct CQueue* Process_CQueue; // for RR
+    // struct CQueue* Process_Queue; // for RR
     struct Node *node;
     struct PNode *PQ_node;
     
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     }
     else if (Algorithm_type == 3) // RR
     {
-        Process_CQueue = CreateCQueue();
+        Process_Queue = Process_Queue();
     }
     else if (Algorithm_type == 4) // MultilevelQ
     {
@@ -198,12 +198,12 @@ int main(int argc, char *argv[])
                 node->Priority=snt_Process_msg.Process.Priority;
                 node->Arrival_Time=snt_Process_msg.Process.ArrivalTime;
                 node->Runtime=snt_Process_msg.Process.Runtime;
-                CEnqueue(Process_CQueue,node);
+                Enqueue(Process_Queue,node);
                 node=NULL;
             }
 
             if(node==NULL){
-                node=CPeek(Process_CQueue);
+                node=Peek(Process_Queue);
             }
 
             if(node!=NULL){
@@ -245,15 +245,12 @@ int main(int argc, char *argv[])
             // system("ps &");
 
             //law 3adda el wa2t
-            // if(getClk()==3){
-            //     printf("Start_Time is %d Quantum is %d getCLK is %d\n",Start_Time,quantum,getClk());
-            // }
             if ((getClk()- Start_Time) == quantum && node!=NULL)
             {
                 system("ps &");
                 printf("Ana f3lan 5alast\n");
                 kill(pid, SIGSTOP); // SIGSTOP=19
-                node = CDequeue(Process_CQueue);
+                node = Dequeue(Process_Queue);
                 // CALCULATE THINGS in PCB
                 pcb->remaining_time -= quantum;
                 pcb->execution_time += quantum;
@@ -276,7 +273,7 @@ int main(int argc, char *argv[])
                 else
                 {
                     fprintf(logptr, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
-                    CEnqueue(Process_CQueue, node);
+                    Enqueue(Process_Queue, node);
                 }
 
                 if (isPCBempty(ProcessTable) && flag)

@@ -2,7 +2,7 @@
 int msgid;
 
 struct proc{
-    int pid;
+    int id;
     int ArrivalTime;
     int RunTime;
     int Priority;
@@ -65,7 +65,7 @@ void ReadInputFile(struct List * Queue)
         int x=fscanf(InputFile,"%c\n",alpha);
         if(x==-1||x==0){fclose(InputFile);break;}
         if(*alpha=='#'){fscanf(InputFile,"%*[^\n]\n");continue;}
-        process->pid=atoi(alpha);
+        process->id=atoi(alpha);
         fscanf(InputFile,"%d\n",&process->ArrivalTime);
         fscanf(InputFile,"%d\n",&process->RunTime);
         fscanf(InputFile,"%d\n",&process->Priority);
@@ -117,7 +117,6 @@ int main(int argc, char *arg[])
     int clkpid=fork();
     if(!clkpid)
     {
-        printf("Before initializing  clock in PG!");
         execl("./clk.out","/clk.out",(char*)NULL);  //Start Clock
     }
     int schedulerpid=fork();

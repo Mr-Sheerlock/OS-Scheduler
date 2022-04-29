@@ -7,11 +7,12 @@ struct PCB
     int waiting_time;
     int execution_time;
     int id;
-}PCB_def={0,0,0,0,-1};
+    int pid;
+}PCB_def={0,0,0,0,-1,-1};
 
 struct proc
 {
-    int pid;
+    int id;
     int ArrivalTime;
     int Runtime;
     int Priority;
@@ -26,9 +27,9 @@ struct PG_msgbuff
 
 int Nprocesses;   
 
-struct PCB* findPCB(int id, struct PCB* pcb){
+struct PCB* findPCB(int pid, struct PCB* pcb){
     for(int i=0;i<Nprocesses;i++){
-        if(id== pcb[i].id){
+        if(pid== pcb[i].pid){
             return &pcb[i];
         }
     }
@@ -41,7 +42,7 @@ struct PCB* findPCB(int id, struct PCB* pcb){
 
 int main(int argc, char *argv[])
 {
-
+ 
    
     // initialization from ProcessGenerator:
     int Algorithm_type= atoi(argv[1]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
     //for Perf
     int Total_Execution_Time=0;
     int Total_Waiting_Time=0;
-    int First_Arrival_Time=1;
+    float Total_WTA=0;
     // for Process Generator Communication
     key_t key_id;
     int rec_val, msgq_id;
@@ -125,10 +126,7 @@ int main(int argc, char *argv[])
             printf("Current Time is %d\n",getClk());
             //in case of message recieval
             printf("\nrec_val is %d\n", rec_val);
-            printf("What I recieved is id %d and arrival %d and runtime %d\n", snt_Process_msg.Process.pid, snt_Process_msg.Process.ArrivalTime,snt_Process_msg.Process.Runtime);
-            if(count==0){
-                First_Arrival_Time=snt_Process_msg.Process.ArrivalTime;
-            }
+            printf("What I recieved is id %d and arrival %d and runtime %d\n", snt_Process_msg.Process.id, snt_Process_msg.Process.ArrivalTime,snt_Process_msg.Process.Runtime);
             // calculate remaining time for process
             if (Algorithm_type < 3)
             {
@@ -144,12 +142,14 @@ int main(int argc, char *argv[])
             }
             //update the PCB with remaining time
             ProcessTable[count].remaining_time = remaining_time;
+            ProcessTable[count].id = snt_Process_msg.Process.id;
 
             // fork the process
             
             pid=fork();
             fflush(stdout);
             printf("pid is %d\n",pid);
+            // system("ps");
             // printf("lolerforker\n");
                         //      make; ./process_generator.out testcase.txt -sch 3 -q 1 &
                         //    A messing AROUND TEST  make; ./process_generator.out testcase.txt -sch 5 -q 2 &
@@ -165,9 +165,9 @@ int main(int argc, char *argv[])
                 execvp(args[0], args);
             }
             //immediately put the child to good sleep C: 
-            printf("before the kill");
+            printf("before the kill\n");
             kill(pid,SIGSTOP); // SIGSTP=19
-            ProcessTable[count].id= pid;
+            ProcessTable[count].pid= pid;
             count++;
         }
         // 2.Switch between two processes according to the scheduling algorithm. (stop
@@ -203,11 +203,11 @@ int main(int argc, char *argv[])
             //output first
             if (pcb->state == -1)
             {
-                fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
             }
             else
             {
-                fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
             }
             kill(pid,SIGCONT);// SIGCONT=18
 
@@ -224,15 +224,15 @@ int main(int argc, char *argv[])
 
             if(pcb->remaining_time==0){
                 ;//Output & Delete
-                fprintf(logptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
-                
+                fprintf(logptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
+                Total_WTA+=(float)(getClk()-node->Arrival_Time)/pcb->execution_time;
                 //Delete data
                 pcb->execution_time=0;
                 pcb->remaining_time=0;
                 pcb->waiting_time=0;
                 pcb->id=-1;
             }else{
-                fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pid, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
                 CEnqueue(Process_CQueue,node);
             }
 
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
     // (b) Scheduler.perf 
     fprintf(perfptr,"CPU utilization = %.2f%%Avg\n",(float)(Total_Execution_Time/getClk()));    
-    fprintf(perfptr,"WTA=%.2f\n",(float)((getClk()-First_Arrival_Time)/Total_Execution_Time));    
+    fprintf(perfptr,"WTA=%.2f\n",(float)(Total_WTA/Nprocesses));    
     fprintf(perfptr,"Avg Waiting = %.2f\n",(float)(Total_Waiting_Time/Nprocesses));    
 
     fclose(logptr);

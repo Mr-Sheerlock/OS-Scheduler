@@ -145,6 +145,7 @@ int main(int argc, char *arg[])
             //printf("Sent %d\n",dequeue(&ProcessQueue)->process->pid);
         }
     }
+    //should send signal to scheduler that it finished.
     sleep(9);
     //kill(schedulerpid,SIGKILL);
     // 7. Clear clock resources

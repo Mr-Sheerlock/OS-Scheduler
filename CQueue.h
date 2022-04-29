@@ -32,7 +32,7 @@ void CEnqueue(struct CQueue *Q ,struct Node *NewNode)
     if(Q->Header == NULL) //If Empty
     {
         Q->Header = Temp;
-        //Q->Header->Next = NULL;
+        Q->Header->Next = Q->Header;
         return;
     }
 

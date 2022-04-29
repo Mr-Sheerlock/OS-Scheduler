@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
     int remaining_time;
     int pid;
     int Start_Time=0;
+    bool flag=0;
 
     //for Perf
     int Total_Execution_Time=0;
@@ -130,6 +131,7 @@ int main(int argc, char *argv[])
 
     // recieve from generator:
     struct PG_msgbuff snt_Process_msg;
+    printf("SchedulerID is %d\n",getpid());
 
     while (1)
     {
@@ -137,12 +139,11 @@ int main(int argc, char *argv[])
         /* receive all types of messages */
         // rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg)-sizeof(PG_msgbuff.mtype), 0, !IPC_NOWAIT);
         //sizeof(long) is the size of mtype
-        rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(snt_Process_msg) - sizeof(long), snt_Process_msg.mtype, !IPC_NOWAIT);
+        rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(struct proc), 2, IPC_NOWAIT);
         if (rec_val != -1)
         {   
             //in case of message recieval
-            printf("I recieved process with id %d arrival %d runtime %d\n",snt_Process_msg.Process.id,snt_Process_msg.Process.Runtime,snt_Process_msg.Process.ArrivalTime);
-            
+           
             remaining_time = snt_Process_msg.Process.Runtime;
             //update the PCB with remaining time
             ProcessTable[count].remaining_time = remaining_time;
@@ -151,18 +152,15 @@ int main(int argc, char *argv[])
             // fork the process
             
             // fflush(stdout);
-            // system("ps");
-            // pid =lol;
-            printf("SchedulerID is %d\n",getpid());
             int lol=fork();
             fflush(stdout);
-                        //      make; ./process_generator.out testcase.txt -sch 3 -q 1 &
-                        //    A messing AROUND TEST  make; ./process_generator.out testcase.txt -sch 5 -q 2 &
+                        //      make; ./process_generator.out  -sch 3 -q 1 &
+                        //    A messing AROUND TEST  make; ./process_generator.out -sch 5 -q 2 &
 
             if (!lol) // the child joins the cult of processes
             {
 
-                printf("I pregnarted a child\n");
+                printf("A child was forked\n");
 
                 my_itoa(remaining_time, bufferion);
                 char *args[] = {"./process.out", bufferion, NULL};
@@ -204,29 +202,37 @@ int main(int argc, char *argv[])
                 node=NULL;
             }
 
-            if(!node){
+            if(node==NULL){
                 node=CPeek(Process_CQueue);
             }
 
             if(node!=NULL){
-                printf("NODE VALUES are %d %d %d \n",node->Arrival_Time,node->PID,node->Runtime);
+                
                 pid=node->PID;
                 pcb=findPCB(pid, ProcessTable); //4a8ala sa7
-                printf("PCB value right now is id %d pid %d execution time %d\n", pcb->id,pcb->pid,pcb->execution_time);
+                // printf("PCB value right now is id %d pid %d execution time %d\n", pcb->id,pcb->pid,pcb->execution_time);
                 //how to get waiting???? 
-                pcb->waiting_time+=(getClk()-node->Arrival_Time) -pcb->execution_time;
-                Total_Waiting_Time+=pcb->waiting_time;
-                
-                if (pcb->state == 0 && pcb->remaining_time==node->Runtime)
-                {
-                    fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
-                    printf("At time %d process %d started arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+
+                //fl bdaya 5ales 
+                if(pcb->state==0){
+                    pcb->waiting_time+=(getClk()-node->Arrival_Time) -pcb->execution_time;
+                    Total_Waiting_Time+=pcb->waiting_time;
+                    Start_Time=getClk();
+                    // printf("Starting time is %d \n",Start_Time);
+                    if (pcb->remaining_time==node->Runtime)
+                    {
+                        fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                        printf("At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                    }
+                    else
+                    {
+                        fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                        printf("At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                    }
                 }
-                else
-                {
-                    fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
-                }
+                // printf("NODE IS NOT NULL YA GAMA3A!\n");
                 kill(pid,SIGCONT);// SIGCONT=18
+
                 pcb->state=1;
             }
 
@@ -236,39 +242,53 @@ int main(int argc, char *argv[])
 
             
             // sleep(quantum);
+            // system("ps &");
+
             //law 3adda el wa2t
-            if( ){
-            kill(pid,SIGSTOP);// SIGSTOP=19
-            //CALCULATE THINGS in PCB
-            pcb->remaining_time-=quantum;
-            pcb->execution_time+=quantum;
-            pcb->state=0;
+            // if(getClk()==3){
+            //     printf("Start_Time is %d Quantum is %d getCLK is %d\n",Start_Time,quantum,getClk());
+            // }
+            if ((getClk()- Start_Time) == quantum && node!=NULL)
+            {
+                system("ps &");
+                printf("Ana f3lan 5alast\n");
+                kill(pid, SIGSTOP); // SIGSTOP=19
+                node = CDequeue(Process_CQueue);
+                // CALCULATE THINGS in PCB
+                pcb->remaining_time -= quantum;
+                pcb->execution_time += quantum;
+                pcb->state = 0;
+
+                Total_Execution_Time += quantum;
+
+                if (pcb->remaining_time <= 0)
+                {
+                    ; // Output & Delete
+                    fprintf(logptr, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time, getClk() - node->Arrival_Time, (float)(getClk() - node->Arrival_Time) / pcb->execution_time);
+                    Total_WTA += (float)(getClk() - node->Arrival_Time) / pcb->execution_time;
+                    // Delete data
+                    pcb->execution_time = 0;
+                    pcb->remaining_time = 0;
+                    pcb->waiting_time = 0;
+                    pcb->id = -1;
+                    pcb->pid = -1;
+                }
+                else
+                {
+                    fprintf(logptr, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
+                    CEnqueue(Process_CQueue, node);
+                }
+
+                if (isPCBempty(ProcessTable) && flag)
+                {
+                    printf("I Should be going to: \n");
+                    goto barra;
+                }
+            }
+
+
+
             
-            Total_Execution_Time+=quantum;
-
-            if(pcb->remaining_time==0){
-                ;//Output & Delete
-                fprintf(logptr,"At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time,getClk()-node->Arrival_Time,(float)(getClk()-node->Arrival_Time)/pcb->execution_time);
-                Total_WTA+=(float)(getClk()-node->Arrival_Time)/pcb->execution_time;
-                //Delete data
-                pcb->execution_time=0;
-                pcb->remaining_time=0;
-                pcb->waiting_time=0;
-                pcb->id=-1;
-                pcb->pid=-1;
-            }else{
-                fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d", getClk(), pcb->id, node->Arrival_Time, node->Runtime, (node->Runtime) - (pcb->execution_time), pcb->waiting_time);
-                CEnqueue(Process_CQueue,node);
-            }
-
-            if(isPCBempty(ProcessTable)){
-                printf("I Should be going to: \n");
-                goto barra;
-            }
-
-            }   
-
-
         }
         else if (Algorithm_type == 4)//MultilevelQ
         {
@@ -298,6 +318,7 @@ int main(int argc, char *argv[])
 
     // (b) Scheduler.perf 
     barra:
+    printf("I WENT BARRA!\n");
 
     fprintf(perfptr,"CPU utilization = %.2f%%Avg\n",(float)(Total_Execution_Time/getClk()));    
     fprintf(perfptr,"WTA=%.2f\n",(float)(Total_WTA/Nprocesses));    

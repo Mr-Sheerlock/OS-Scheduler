@@ -146,6 +146,7 @@ int main(int argc, char *arg[])
         }
     }
     //should send signal to scheduler that it finished.
+    kill(schedulerpid,SIGUSR2);
     sleep(15);
     //kill(schedulerpid,SIGKILL);
     // 7. Clear clock resources

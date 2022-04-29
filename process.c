@@ -14,7 +14,7 @@ int main(int agrc, char * argv[])
 
     raise(SIGSTOP);
     //TODO it needs to get the remaining time from somewhere
-    printf(" process started\n");
+    // printf(" process started\n");
 
     remainingtime = atoi(argv[1]);
     while (remainingtime > 0)
@@ -23,7 +23,7 @@ int main(int agrc, char * argv[])
         while(x==getClk()); //passes 1 second
 
         remainingtime--;
-        printf("remaining time is %d\n ",remainingtime);
+        // printf("remaining time is %d\n ",remainingtime);
         // system("ps &");
     }
     

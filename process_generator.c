@@ -52,6 +52,7 @@ void enqueue(struct List*list,struct LNode* node)
     } while (tempptr=tempptr->Next);
 
 }
+
 void ReadInputFile(struct List * Queue)
 {
     FILE*InputFile;
@@ -62,18 +63,20 @@ void ReadInputFile(struct List * Queue)
     {
         struct LNode*node=calloc(1,sizeof(struct LNode));
         struct proc*process=calloc(1,sizeof(struct proc));
-        int x=fscanf(InputFile,"%c\n",alpha);
-        if(x==-1||x==0){fclose(InputFile);break;}
+        long x=ftell(InputFile);
+        int y=fscanf(InputFile,"%c",alpha);
+        if(y==-1||y==0){fclose(InputFile);break;}
         if(*alpha=='#'){fscanf(InputFile,"%*[^\n]\n");continue;}
-        process->id=atoi(alpha);
-        fscanf(InputFile,"%d\n",&process->ArrivalTime);
-        fscanf(InputFile,"%d\n",&process->RunTime);
-        fscanf(InputFile,"%d\n",&process->Priority);
+        fseek(InputFile,x,SEEK_SET);
+        fscanf(InputFile,"%d",&process->id);
+        fscanf(InputFile,"%d",&process->ArrivalTime);
+        fscanf(InputFile,"%d",&process->RunTime);
+        fscanf(InputFile,"%d",&process->Priority);
         c++;
+        process->SchPriority=process->ArrivalTime;
         node->process=process;
         enqueue(Queue,node);
     }
-
 }
 
 void clearResources(int);
@@ -147,10 +150,10 @@ int main(int argc, char *arg[])
     }
     //should send signal to scheduler that it finished.
     kill(schedulerpid,SIGUSR2);
-    sleep(15);
+    sleep(20);
     //kill(schedulerpid,SIGKILL);
     // 7. Clear clock resources
-    destroyClk(true);
+    destroyClk(false);
 }
 
 void clearResources(int signum)

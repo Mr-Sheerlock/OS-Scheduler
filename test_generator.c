@@ -14,7 +14,7 @@ struct processData
 int main(int argc, char * argv[])
 {
     FILE * pFile;
-    pFile = fopen("processes.txt", "w");
+    pFile = fopen("testcase.txt", "w");
     int no;
     struct processData pData;
     printf("Please enter the number of processes you want to generate: ");

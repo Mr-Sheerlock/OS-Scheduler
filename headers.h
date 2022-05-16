@@ -15,6 +15,7 @@
 #include "PQueue.h"
 #include "PCB.h"
 #include "memory.h"
+#include<math.h>
 
 typedef short bool;
 #define true 1

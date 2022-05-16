@@ -23,6 +23,8 @@ struct Node
     int Priority;
     int Arrival_Time;
     int Runtime;
+    int id;
+    int MemS; 
 };
 
 

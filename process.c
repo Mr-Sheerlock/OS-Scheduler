@@ -3,18 +3,20 @@
 /* Modify this file as needed*/
 int remainingtime;
 
-
+int running=0;
+void conthand()
+{
+     running=1;
+}
 
 int main(int agrc, char * argv[])
 {
+    signal(SIGCONT,conthand);
+    kill(getppid(),SIGCONT);
     initClk();
     
-    //printf("\n 3) Process Starting!\n");
-    // system("ps &");
-
-    raise(SIGSTOP);
+    
     //TODO it needs to get the remaining time from somewhere
-    // printf(" process started\n");
 
     remainingtime = atoi(argv[1]);
     printf("clk in process = %d\n", getClk());
@@ -37,7 +39,9 @@ int main(int agrc, char * argv[])
             printf("remaining time is %d\n ",remainingtime);
         //}
     }
-    //printf("12) Process Finished!\n");
+    kill(getppid(),SIGUSR1);
+    
+    printf("PROCESS DEAD\n");
     destroyClk(false);
     
    return 0;

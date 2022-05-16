@@ -12,7 +12,9 @@
 #include <signal.h>
 #include <string.h>
 #include "queue.h"
-#include "Pqueue.h"
+#include "PQueue.h"
+#include "PCB.h"
+#include "memory.h"
 
 typedef short bool;
 #define true 1

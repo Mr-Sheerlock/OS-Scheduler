@@ -17,6 +17,7 @@ struct proc
     int Runtime;
     int Priority;
     int SchPriority;
+    int MemS;
 };
 
 struct PG_msgbuff
@@ -24,38 +25,55 @@ struct PG_msgbuff
     long mtype;
     struct proc Process;
 };
+ FILE *logptr;
+ FILE *perfptr;
+ // some variables used inside
+ int count = 0;
+ int remaining_time;
+ int pid;
+ int Start_Time = 0;
+ bool finish=0;
 
-int Nprocesses;   
+ // for SJF
+ int RunningPID = -1;
+ int PreviousCycle = 0;
+ int ArrivalTime;
+ int FinishedProc = 0;
+
+ // for MLFB
+ int CurrentPriority=-1;
+
+ // for Perf
+ int Total_Execution_Time = 0;
+ int Total_Waiting_Time = 0;
+ float Total_WTA = 0;
+
+ struct PCB *ProcessTable;
+
+ struct PCB *pcb = NULL;
+ struct PCB *temp = NULL;
+
+ // initialization of ProcessTable
 
 
-struct PCB* findPCB(int pid, struct PCB* ProcessTable){
-    for(int i=0;i<Nprocesses;i++){
-        if(pid== ProcessTable[i].pid){
-            return &ProcessTable[i];
-        }
-    }
-    return NULL;
-}
+// Data Structures that are initialized when needed according to algorithm
+struct Queue *Process_Queue;
+struct PQueue *Process_PQueue;
+struct Node *node = NULL;
+struct Node *tempnode = NULL;
+struct PNode *PQ_node;
+struct Queue *Process_Queues_Arr[12];
 
-bool isPCBempty(struct PCB* pcb){
+struct Queue* Waiting_List;
+struct Node* ListNode;
 
-    for (int i=0;i<Nprocesses;i++){
-        if(pcb[i].pid!=-1){
-            return false;
-        }
-    }
-    return true;
-}
-
-
-bool PG_fanoosh=0;
-
-void PG_finish(int signum){
-    PG_fanoosh=1;
-}
-
-//      make; ./process_generator.out testcase.txt -sch 3 -q 1 &
-//     make; ./process_generator.out testcase.txt -sch 5 -q 2 &
+void finish_SJF();
+void finish_HPF();
+void finish_RR();
+void finish_MQ();
+//      make; ./process_generator.out "testcase.txt" -sch 3 -q 1 &
+//     make; ./process_generator.out "testcase.txt" -sch 5 -q 2 &
+//FOR DEBUGGING : gdb --args ./Process_generator.out -g -sch 3 -q
 
 int main(int argc, char *argv[])
 {
@@ -147,7 +165,11 @@ int main(int argc, char *argv[])
     struct PG_msgbuff snt_Process_msg;
     //printf("SchedulerID is %d\n",getpid());
 
-    while (1)
+    
+
+    printf("SCHEDULER ID is %d\n",getpid()); 
+
+    while (1 && !finish)
     {
 
         /* receive all types of messages */
@@ -156,39 +178,14 @@ int main(int argc, char *argv[])
         rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(struct proc), 2, IPC_NOWAIT);
         if (rec_val != -1)
         {   
+            printf("id: %d, arrival: %d, runtime:, %d, priority: %d Mem: %d\n",snt_Process_msg.Process.id, snt_Process_msg.Process.ArrivalTime, snt_Process_msg.Process.Runtime, snt_Process_msg.Process.Priority, snt_Process_msg.Process.MemS);
             //in case of message recieval
-//printf("1) What I recieved is id %d and arrival %d and runtime %d\n", snt_Process_msg.Process.id, snt_Process_msg.Process.ArrivalTime,snt_Process_msg.Process.Runtime);
             //update the PCB with remaining time
-            remaining_time = snt_Process_msg.Process.Runtime;
-            ProcessTable[count].remaining_time = remaining_time;
+            ProcessTable[count].MemS = snt_Process_msg.Process.MemS;
             ProcessTable[count].id = snt_Process_msg.Process.id;
 
-            // fork the process
-            
-            // fflush(stdout);
-            int lol=fork();
-            fflush(stdout);
-                        //      make; ./process_generator.out  -sch 3 -q 1 &
-                        //    A messing AROUND TEST  make; ./process_generator.out -sch 5 -q 2 &
-
-            if (!lol) // the child joins the cult of processes
-            {
-
-                //printf("2) A child was forked PID = %d\n", getpid());
-
-                my_itoa(remaining_time, bufferion);
-                char *args[] = {"./process.out", bufferion, NULL};
-
-                
-                execvp(args[0], args);
-            }
-            //printf("Algorithm = %d\n", Algorithm_type);
-            // immediately put the child to good sleep C:
-            // printf("before the kill ");
-            // printf("pid is %d\n", getpid());
-            ProcessTable[count].pid = lol;
+            //remaining_time = snt_Process_msg.Process.Runtime;            
             count++;
-            pid = lol;
         }
         // 2.Switch between two processes according to the scheduling algorithm. (stop
         // the old process and save its state and start/resume another one.)
@@ -200,7 +197,8 @@ int main(int argc, char *argv[])
                 //Add the process in priority queue
                 PQ_node = CreatePNode();
                 PQ_node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
-                PQ_node->PID = pid;
+                PQ_node->PID = 0;
+                PQ_node->id = snt_Process_msg.Process.id;
                 PQ_node->Priority = snt_Process_msg.Process.Priority;
                 PQ_node->Runtime = snt_Process_msg.Process.Runtime;
                 PQ_node->Q_Priority = PQ_node->Runtime;
@@ -214,13 +212,41 @@ int main(int argc, char *argv[])
                 //printf("6) No Process is running\n");
                 if(PPeek(Process_PQueue)) //if ready queue is not empty
                 {
-                    //printf("7) Ready queue is not empty\n");
+                    printf("not empty\n");
+                    //Dequeue the process
                     PQ_node = DePQueue(Process_PQueue);
-                    RunningPID = PQ_node->PID;
+                    RunningPID = PQ_node->id;
                     pcb = findPCB(RunningPID, ProcessTable);
                     pcb->state = 1 ; //Running
                     pcb->waiting_time = getClk() - PQ_node->Arrival_Time;
                     pcb->execution_time = PQ_node->Runtime;
+                    pcb->remaining_time = PQ_node->Runtime;
+/////////////////////////////////////////////////////////////////////////////////////
+                    // fork the process
+            
+                    pid=fork();
+                    fflush(stdout);
+                        //      make; ./process_generator.out  -sch 3 -q 1 &
+                        //    A messing AROUND TEST  make; ./process_generator.out -sch 5 -q 2 &
+                    waiter=1;
+                    remaining_time = PQ_node->Runtime;
+                    if (!pid) // the child joins the cult of processes
+                    {
+
+                        //printf("A child was forked\n");
+
+                        my_itoa(remaining_time, bufferion);
+                        char *args[] = {"./process.out", bufferion, NULL};
+
+                        
+                        execvp(args[0], args);
+                    }
+                    // system("ps");
+                    pcb->pid = pid;
+                    //ProcessTable[count].pid = pid;
+                    PQ_node->PID = pid;
+                    if(waiter){raise(SIGSTOP);}
+/////////////////////////////////////////////////////////////////////////////////////    
 
                     logptr = fopen("scheduler.log", "a");
                     fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, PQ_node->Runtime, PQ_node->Runtime, pcb->waiting_time);

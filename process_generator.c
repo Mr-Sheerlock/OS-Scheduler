@@ -7,6 +7,7 @@ struct proc{
     int RunTime;
     int Priority;
     int SchPriority;  // To Be Assigned in Scheduler Based on Algorithm
+    int MemS; //memory size
 };
 struct msg{
     long mtype;
@@ -68,12 +69,20 @@ void ReadInputFile(struct List * Queue)
         if(y==-1||y==0){fclose(InputFile);break;}
         if(*alpha=='#'){fscanf(InputFile,"%*[^\n]\n");continue;}
         fseek(InputFile,x,SEEK_SET);
-        fscanf(InputFile,"%d",&process->id);
-        fscanf(InputFile,"%d",&process->ArrivalTime);
-        fscanf(InputFile,"%d",&process->RunTime);
-        fscanf(InputFile,"%d",&process->Priority);
-        c++;
+        y=fscanf(InputFile,"%d",&process->id);
+        if(!y){return 0;}
+        y=fscanf(InputFile,"%d",&process->ArrivalTime);
+        if(!y){return 0;}
+        y=fscanf(InputFile,"%d",&process->RunTime);
+        if(!y){return 0;}
+        y=fscanf(InputFile,"%d",&process->Priority);        
+        if(!y){return 0;}
         process->SchPriority=process->ArrivalTime;
+
+        if(!y){return 0;}
+        y=fscanf(InputFile,"%d%*[^\n]\n",&process->MemS); 
+
+
         node->process=process;
         enqueue(Queue,node);
     }
@@ -83,7 +92,7 @@ void clearResources(int);
 
 int main(int argc, char *arg[])
 {
-    signal(SIGINT, clearResources);
+signal(SIGINT, clearResources);
     // TODO Initialization
     //? 2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
 

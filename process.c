@@ -17,15 +17,25 @@ int main(int agrc, char * argv[])
     // printf(" process started\n");
 
     remainingtime = atoi(argv[1]);
+    printf("clk in process = %d\n", getClk());
+    // if(remainingtime == 0)
+    // {
+    //     raise(SIGSTOP);
+    // }
     while (remainingtime > 0)
     {
-        //printf("hellloooo\n");
-        int x = getClk();
-        while(x==getClk()); //passes 1 second
+        // if(!running)
+        // {
+        //     raise(SIGSTOP);
+        // }
+        //else
+        //{
+            int x = getClk();
+            while(x==getClk()); //passes 1 second
 
-        remainingtime--;
-        // printf("remaining time is %d\n ",remainingtime);
-        // system("ps &");
+            remainingtime--;
+            printf("remaining time is %d\n ",remainingtime);
+        //}
     }
     //printf("12) Process Finished!\n");
     destroyClk(false);

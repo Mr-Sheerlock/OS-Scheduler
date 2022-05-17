@@ -23,9 +23,11 @@ struct PG_msgbuff
     long mtype;
     struct proc Process;
 };
+
  FILE *logptr;
  FILE *perfptr;
  // some variables used inside
+ int Algorithm_type=0;
  int count = 0;
  int remaining_time;
  int pid;
@@ -67,52 +69,212 @@ struct Queue *WaitingQ;
 struct Node* WaitingNode;
 
 //Buddy Lists
-struct Mem_List* M1024;
-struct Mem_List* M512;
-struct Mem_List* M256;
-struct Mem_List* M128;
-struct Mem_List* M64;
-struct Mem_List* M32;
-struct Mem_List* M16;
-struct Mem_List* M8;
+
+struct Mem_List* AvailableMemory[8];  // an array of memory lists Arr
+
+//Arr[0] corresponds to Memory of size 8, Arr[1] to size 16 .... Arr[7] to size 1024
 
 
 void finish_SJF();
 void finish_HPF();
 void finish_RR();
 void finish_MQ();
+
+//for Process.c initial Communication
+char bufferion[20]; // buffer for integer to char conversion
+
+// for Process Generator Communication
+key_t key_id;
+int rec_val, msgq_id;
+
 //      make; ./process_generator.out "testcase.txt" -sch 3 -q 1 &
 //     make; ./process_generator.out "testcase.txt" -sch 5 -q 2 &
 //FOR DEBUGGING : gdb --args ./Process_generator.out -g -sch 3 -q
 
+
+
+bool Allocate(struct Mem_List *M)
+{
+    //add in pcb and ready queues
+    //remove free memory address from the buddy lists
+    if(!IsEmptyList(M)){
+
+        //remove from waiting queue 
+        int start =M->Header->start;
+        Dequeue(WaitingQ);
+        //add in pcb and ready queue
+        ProcessTable[count].id=WaitingNode->id;
+        ProcessTable[count].waiting_time= getClk()- WaitingNode->Arrival_Time;
+        ProcessTable[count].MemSize=WaitingNode->MemS;
+        ProcessTable[count].remaining_time=WaitingNode->Runtime;
+        ProcessTable[count].MStart=start;
+        
+        // WaitingNode->Priority = ;
+        // WaitingNode->Runtime = ;
+        // WaitingNode->Arrival_Time =;
+    
+
+        //fork
+        pid = fork();
+        fflush(stdout);
+        waiter = 1;
+        if (!pid) // the child joins the cult of processes
+        {
+
+            printf("A child was forked\n");
+
+            my_itoa(remaining_time, bufferion);
+            char *args[] = {"./process.out", bufferion, NULL};
+
+            execvp(args[0], args);
+        }
+        ProcessTable[count].pid = pid;
+        count++;
+        //handshake
+        if(waiter){raise(SIGSTOP);}
+
+
+        //add to DS's
+        if (Algorithm_type == 1) // SJF
+        {
+            PQ_node = CreatePNode();
+            PQ_node->Arrival_Time = WaitingNode->Arrival_Time;
+            PQ_node->PID = pid; 
+            PQ_node->id = WaitingNode->id;
+            PQ_node->Priority = WaitingNode->Priority;
+            PQ_node->Runtime = WaitingNode->Runtime;
+            PQ_node->Q_Priority = PQ_node->Runtime;
+            EnPQueue(Process_PQueue, PQ_node);
+        }
+        else if (Algorithm_type == 2) // HPF
+        {
+            PQ_node = CreatePNode();
+            PQ_node->PID = pid;
+            PQ_node->Priority = WaitingNode->Priority;
+            PQ_node->Q_Priority = WaitingNode->Priority;
+            PQ_node->Arrival_Time = WaitingNode->Arrival_Time;
+            PQ_node->Runtime = WaitingNode->Runtime;
+            // struct proc*proc=malloc(sizeof(struct proc));
+            // *proc=snt_Process_msg.Process;
+            // node->process=proc;
+            EnPQueue(Process_PQueue, PQ_node);
+            pcb = findPCB(Process_PQueue->Header->PID, ProcessTable); // this will always contain the head with higher priority
+        }
+        else if (Algorithm_type == 3) // RR
+        {
+            node = CreateNode();
+            node->PID = pid;
+            node->Priority =WaitingNode->Priority;
+            node->Arrival_Time =  WaitingNode->Arrival_Time;
+            node->Runtime = WaitingNode->Runtime;
+            Enqueue(Process_Queue, node);
+            node = NULL;
+        }
+        else if (Algorithm_type == 4) // MultilevelQ
+        {
+            if (rec_val != -1)
+            {
+                if (WaitingNode->Runtime)
+                {
+                    struct Node *nodeToBeAdded = CreateNode();
+                    nodeToBeAdded->PID = pid;
+                    nodeToBeAdded->Priority = WaitingNode->Priority;
+                    nodeToBeAdded->Priority = (nodeToBeAdded->Priority > 10) ? 10 : nodeToBeAdded->Priority;
+                    nodeToBeAdded->Priority = (nodeToBeAdded->Priority < 0) ? 0 : nodeToBeAdded->Priority;
+                    
+                    nodeToBeAdded->Arrival_Time = WaitingNode->Arrival_Time;
+                    nodeToBeAdded->Runtime = WaitingNode->Runtime;
+                    Enqueue(Process_Queues_Arr[nodeToBeAdded->Priority], nodeToBeAdded);
+                }
+                else
+                {
+                    FinishedProc++;
+                }
+            }
+        }
+
+        //delete from Avaialable
+        //delete the first element
+        Delete(M,start);
+        return true;
+
+    //print "memory allocated" in memory.log
+    //remove free memory address from the buddy lists
+    //Add this into a loop until no more processes can be allocated
+    }
+    return false;
+}
+
+
+
+
+
 //Phase 2
-void Allocate()
+bool Try2Allocate()
 {
     if(!Peek(WaitingQ)) //waiting list is empty
     {
-        return;
+        return false;
     }
-    struct Node* TempProcess =  Peek(WaitingQ);
-    int size = TempProcess->MemS;
-
+    // struct Node* TempProcess =  Peek(WaitingQ);
+    // int size = TempProcess->MemS;
+    WaitingNode=Peek(WaitingQ);
+    int size = WaitingNode->MemS;
     //Calculate closest power of 2
     int power = 0;
     for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
     {
-        if(pow(2, i) > size)
+        if(pow(2, i) >= size)
         {
             power = i;
-            return;
+            break;
         }
     }
     size = pow(2, power);
     
+    power= power-3; //because our array is shifted
     //Find free memory 
-    //add in pcb and ready queue
+    
+    if (IsEmptyList(AvailableMemory[power])){
+        int c=power+1;
+        for (c;c < 8; c++)
+        {
+
+            if (!IsEmptyList(AvailableMemory[c]))
+            {
+                break;
+            }
+        }
+        //if there is no free memory
+        if(c==8){
+            return false;
+        }
+        //now we start dividing 
+        while(c!=power){
+            int start=AvailableMemory[c]->Header->start; 
+            Delete(AvailableMemory[c],start);
+            struct Mem_Node * lowerMemNode = CreateMem_Node();
+            lowerMemNode->start=start;
+            c--;
+            Insert(AvailableMemory[c],lowerMemNode);
+            lowerMemNode=CreateMem_Node();
+
+            lowerMemNode->start=start+pow(c,2);
+            Insert(AvailableMemory[c],lowerMemNode);
+        }
+    }
+    
+
+    //allocate
+    return Allocate(AvailableMemory[power]);
+    
     //print "memory allocated" in memory.log
-    //remove free memory address from the buddy lists
     //Add this into a loop until no more processes can be allocated
 }
+
+
+
+
 
 
 void Deallocate(int StartAdd, int size)
@@ -132,23 +294,21 @@ int main(int argc, char *argv[])
 
     ////Phase 2
     WaitingQ = CreateQueue();
-    M1024 = CreateMem_List();
-    M512 = CreateMem_List();
-    M256 = CreateMem_List();
-    M128 = CreateMem_List();
-    M64 = CreateMem_List();
-    M32 = CreateMem_List();
-    M16 = CreateMem_List();
-    M8 = CreateMem_List();
+
+    for (int i =0; i<8; i++){
+        AvailableMemory[i]=CreateMem_List();
+    }
+
+
 
     struct Mem_Node* Init_Node = CreateMem_Node();
     Init_Node->start = 0;
-    Insert(M1024, Init_Node);
+    Insert(AvailableMemory[7], Init_Node);
 
-    printList(M1024);
+    printList(AvailableMemory[7]);
 
     // initialization from ProcessGenerator:
-    int Algorithm_type= atoi(argv[1]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
+    Algorithm_type= atoi(argv[1]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
     int quantum=atoi(argv[2]);
     Nprocesses=atoi(argv[3]);
 
@@ -186,14 +346,10 @@ int main(int argc, char *argv[])
     #pragma endregion
      
     
-    // for Process Generator Communication
-    key_t key_id;
-    int rec_val, msgq_id;
+   
     key_id = ftok("dummy", 65);
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
 
-    //for Process.c initial Communication
-    char bufferion[20]; //buffer for integer to char conversion
     
     //For Output
    
@@ -219,8 +375,8 @@ int main(int argc, char *argv[])
             printf("id: %d, arrival: %d, runtime:, %d, priority: %d Mem: %d\n",snt_Process_msg.Process.id, snt_Process_msg.Process.ArrivalTime, snt_Process_msg.Process.Runtime, snt_Process_msg.Process.Priority, snt_Process_msg.Process.MemS);
             //in case of message recieval
             //update the PCB with remaining time
-            ProcessTable[count].MemS = snt_Process_msg.Process.MemS;
-            ProcessTable[count].id = snt_Process_msg.Process.id;
+            // ProcessTable[count].MemS = snt_Process_msg.Process.MemS;
+            // ProcessTable[count].id = snt_Process_msg.Process.id;
 
             WaitingNode = CreateNode();
             WaitingNode->id = snt_Process_msg.Process.id;
@@ -232,27 +388,35 @@ int main(int argc, char *argv[])
             Enqueue(WaitingQ, WaitingNode);
             //remaining_time = snt_Process_msg.Process.Runtime;    
 
-            count++;
+            // count++;
         }
-        Allocate();
+        
+        //phase 2 
+        //** WE SHOULD CHANGE THE POSITIONING TO ACCOMODATE FOR EVERY ALGORITHM 
+        // BUT WE LEAVE IT HERE FOR NOW 
+        
+        while(Try2Allocate());  //loop over it 
+
+
+
         // 2.Switch between two processes according to the scheduling algorithm. (stop
         // the old process and save its state and start/resume another one.)
         if (Algorithm_type == 1) // SJF
         {
-              if(rec_val!=-1)
-            {
-                //Add the process in priority queue
-                PQ_node = CreatePNode();
-                PQ_node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
-                PQ_node->PID = 0;
-                PQ_node->id = snt_Process_msg.Process.id;
-                PQ_node->Priority = snt_Process_msg.Process.Priority;
-                PQ_node->Runtime = snt_Process_msg.Process.Runtime;
-                PQ_node->Q_Priority = PQ_node->Runtime;
-                EnPQueue(Process_PQueue, PQ_node);
+            //   if(rec_val!=-1)
+            // {
+            //     //Add the process in priority queue
+            //     PQ_node = CreatePNode();
+            //     PQ_node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
+            //     PQ_node->PID = 0;
+            //     PQ_node->id = snt_Process_msg.Process.id;
+            //     PQ_node->Priority = snt_Process_msg.Process.Priority;
+            //     PQ_node->Runtime = snt_Process_msg.Process.Runtime;
+            //     PQ_node->Q_Priority = PQ_node->Runtime;
+            //     EnPQueue(Process_PQueue, PQ_node);
 
-                continue; //go back to the beginning of the loop to check for any process with the same arrival time
-            }
+            //     continue; //go back to the beginning of the loop to check for any process with the same arrival time
+            // }
             if(RunningPID == -1) //No process is running
             {
                 if(PPeek(Process_PQueue)) //if ready queue is not empty
@@ -321,106 +485,109 @@ int main(int argc, char *argv[])
         }
         else if (Algorithm_type == 2)//HPF
         {
-            if (rec_val != -1)
-            {
-                // intialize the PQ_Node
-                //snt_Process_msg.Process.SchPriority = snt_Process_msg.Process.Priority;
-                // struct Node*node=malloc(sizeof(struct Node));
-                PQ_node = CreatePNode();
-                PQ_node->PID = pid;
-                PQ_node->Priority = snt_Process_msg.Process.Priority;
-                PQ_node->Q_Priority = snt_Process_msg.Process.Priority;
-                PQ_node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
-                PQ_node->Runtime = snt_Process_msg.Process.Runtime;
-                // struct proc*proc=malloc(sizeof(struct proc));
-                // *proc=snt_Process_msg.Process;
-                // node->process=proc;
-                EnPQueue(Process_PQueue, PQ_node);
-                pcb = findPCB(Process_PQueue->Header->PID, ProcessTable); //this will always contain the head with higher priority
-            }
+            // if (rec_val != -1)
+            // {
+            //     // intialize the PQ_Node
+            //     //snt_Process_msg.Process.SchPriority = snt_Process_msg.Process.Priority;
+            //     // struct Node*node=malloc(sizeof(struct Node));
+            //     PQ_node = CreatePNode();
+            //     PQ_node->PID = pid;
+            //     PQ_node->Priority = snt_Process_msg.Process.Priority;
+            //     PQ_node->Q_Priority = snt_Process_msg.Process.Priority;
+            //     PQ_node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
+            //     PQ_node->Runtime = snt_Process_msg.Process.Runtime;
+            //     // struct proc*proc=malloc(sizeof(struct proc));
+            //     // *proc=snt_Process_msg.Process;
+            //     // node->process=proc;
+            //     EnPQueue(Process_PQueue, PQ_node);
+            //     pcb = findPCB(Process_PQueue->Header->PID, ProcessTable); //this will always contain the head with higher priority
+            // }
                 //printf("%d\n",pcb->state);
-                if (pcb&&!pcb->state)
+            if (pcb && !pcb->state)
+            {
+                PreviousCycle = getClk();
+                // law mafee4 next ebda2 3la tool
+                if (!(Process_PQueue->Header->Next))
                 {
-                    PreviousCycle=getClk();
-                    //law mafee4 next ebda2 3la tool 
-                    if (!(Process_PQueue->Header->Next))
+                    printf("Starting!\n");
+                    PQ_node = PPeek(Process_PQueue);
+                    // pcb->waiting_time = (getClk()) - (PQ_node->Arrival_Time) - (pcb->execution_time);
+                    pcb->state = 1;
+                    kill(pcb->pid, SIGCONT);
+                    Start_Time = getClk();
+                    if (pcb->execution_time == 0)
                     {
-                        printf("Starting!\n");
-                        PQ_node=PPeek(Process_PQueue);
-                        //pcb->waiting_time = (getClk()) - (PQ_node->Arrival_Time) - (pcb->execution_time);
-                        pcb->state = 1;
-                        kill(pcb->pid, SIGCONT);
-                        Start_Time = getClk();
-                        if(pcb->execution_time==0)
-                        {
-                            fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                            //printf("At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                        }
-                        else
-                        {
-                            fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                            //printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                        }
+                        fprintf(logptr, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time + pcb->remaining_time, pcb->remaining_time, pcb->waiting_time);
+                        // printf("At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
                     }
                     else
                     {
-                        //something else should be running then.
-                        printf("Context Switch\n");
-                        pid = Process_PQueue->Header->Next->PID;
-                        temp = findPCB(pid, ProcessTable);
-                        if(temp->state==1)
-                        {
-                            temp->state = 0;
-                            kill(temp->pid, SIGSTOP);
-                            // temp->execution_time+=getClk()-Start_Time;
-                            // temp->remaining_time-=getClk()-Start_Time;
-                            //by here we should have the next process in PQ_Node
-                            PQ_node=Process_PQueue->Header->Next;
-                            fprintf(logptr,"At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time+temp->remaining_time,temp->remaining_time , temp->waiting_time);
-                            printf("At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time+temp->remaining_time,temp->remaining_time , temp->waiting_time);
-                        }
-                        PQ_node=PPeek(Process_PQueue);
-                        // pcb->waiting_time=(getClk())-(PQ_node->Arrival_Time)-(pcb->execution_time)+(pcb->remaining_time);
-                        pcb->state = 1;
-                        kill(pcb->pid, SIGCONT);
-                        Start_Time=getClk();
-                        if(pcb->execution_time==0)
-                        {
-                            fprintf(logptr,"At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                            //printf("At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                        }
-                        else
-                        {
-                            fprintf(logptr,"At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                            //printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
-                        }
+                        fprintf(logptr, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time + pcb->remaining_time, pcb->remaining_time, pcb->waiting_time);
+                        // printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
                     }
                 }
+                else
+                {
+                    // something else should be running then.
+                    printf("Context Switch\n");
+                    pid = Process_PQueue->Header->Next->PID;
+                    temp = findPCB(pid, ProcessTable);
+                    if (temp->state == 1)
+                    {
+                        temp->state = 0;
+                        kill(temp->pid, SIGSTOP);
+                        // temp->execution_time+=getClk()-Start_Time;
+                        // temp->remaining_time-=getClk()-Start_Time;
+                        // by here we should have the next process in PQ_Node
+                        PQ_node = Process_PQueue->Header->Next;
+                        fprintf(logptr, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->remaining_time, temp->waiting_time);
+                        printf("At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->remaining_time, temp->waiting_time);
+                    }
+                    PQ_node = PPeek(Process_PQueue);
+                    // pcb->waiting_time=(getClk())-(PQ_node->Arrival_Time)-(pcb->execution_time)+(pcb->remaining_time);
+                    pcb->state = 1;
+                    kill(pcb->pid, SIGCONT);
+                    Start_Time = getClk();
+                    if (pcb->execution_time == 0)
+                    {
+                        fprintf(logptr, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time + pcb->remaining_time, pcb->remaining_time, pcb->waiting_time);
+                        // printf("At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
+                    }
+                    else
+                    {
+                        fprintf(logptr, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time + pcb->remaining_time, pcb->remaining_time, pcb->waiting_time);
+                        // printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id, PQ_node->Arrival_Time, pcb->execution_time+pcb->remaining_time,pcb->remaining_time , pcb->waiting_time);
+                    }
+                }
+            }
 
-            if(getClk()== PreviousCycle+1){
+            if (getClk() == PreviousCycle + 1)
+            {
                 printf("a cycle passed!\n");
-                PreviousCycle=getClk();
-                if(PQ_node!=NULL){
+                PreviousCycle = getClk();
+                if (PQ_node != NULL)
+                {
 
                     pcb->remaining_time -= 1;
                     pcb->execution_time += 1;
                     Total_Execution_Time += 1;
                     updateWaiting(ProcessTable);
-                    if(pcb->id != -1) printf("Remaining time in scheduler is %d\n",pcb->remaining_time);
+                    if (pcb->id != -1)
+                        printf("Remaining time in scheduler is %d\n", pcb->remaining_time);
                 }
                 if (PQ_node != NULL && pcb->remaining_time == 0)
                 {
                     printf("Finished!!!\n");
-                    PQ_node=DePQueue(Process_PQueue);
-                    temp= findPCB(PQ_node->PID, ProcessTable);
-                    //temp->execution_time += getClk() - Start_Time;
-                    //temp->remaining_time -= getClk() - Start_Time;
-                    fprintf(logptr, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->waiting_time,getClk() - PQ_node->Arrival_Time,(float)(getClk() - PQ_node->Arrival_Time) / temp->execution_time);
+                    PQ_node = DePQueue(Process_PQueue);
+                    temp = findPCB(PQ_node->PID, ProcessTable);
+                    // temp->execution_time += getClk() - Start_Time;
+                    // temp->remaining_time -= getClk() - Start_Time;
+                    fprintf(logptr, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->waiting_time, getClk() - PQ_node->Arrival_Time, (float)(getClk() - PQ_node->Arrival_Time) / temp->execution_time);
                     Total_WTA += (float)(getClk() - PQ_node->Arrival_Time) / temp->execution_time;
-                    Total_Waiting_Time+=temp->waiting_time;
-                    FinishedProc+=1;
+                    Total_Waiting_Time += temp->waiting_time;
+                    FinishedProc += 1;
                     free(PQ_node);
-                    PQ_node=NULL;
+                    PQ_node = NULL;
                     temp->execution_time = 0;
                     temp->remaining_time = 0;
                     temp->waiting_time = 0;
@@ -450,7 +617,6 @@ int main(int argc, char *argv[])
                     goto barra;
                 }
             }
-        
         }
         else if (Algorithm_type == 3) // RR
         {
@@ -460,17 +626,17 @@ int main(int argc, char *argv[])
             // printf("LOLER\n");
 
             // you should move this up later
-            if (rec_val != -1)
-            {
-                // printf("I recieved and creating\n");
-                node = CreateNode();
-                node->PID = pid;
-                node->Priority = snt_Process_msg.Process.Priority;
-                node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
-                node->Runtime = snt_Process_msg.Process.Runtime;
-                Enqueue(Process_Queue, node);
-                node = NULL;
-            }
+            // if (rec_val != -1)
+            // {
+            //     // printf("I recieved and creating\n");
+            //     node = CreateNode();
+            //     node->PID = pid;
+            //     node->Priority = snt_Process_msg.Process.Priority;
+            //     node->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
+            //     node->Runtime = snt_Process_msg.Process.Runtime;
+            //     Enqueue(Process_Queue, node);
+            //     node = NULL;
+            // }
 
             if (node == NULL)
             {
@@ -568,9 +734,6 @@ int main(int argc, char *argv[])
                             ProcessTable[count].pid = pid;
                             count++;
 
-                            // system("ps");
-
-                            // usleep(1000);
                             if (waiter)
                             {
                                 raise(SIGSTOP);
@@ -625,22 +788,22 @@ int main(int argc, char *argv[])
         }
         else if (Algorithm_type == 4)//MultilevelQ
         {
-            if (rec_val != -1)
-            {
-                if (snt_Process_msg.Process.Runtime){
-                    struct Node* nodeToBeAdded = CreateNode();
-                    nodeToBeAdded->PID = pid;
-                    nodeToBeAdded->Priority = snt_Process_msg.Process.Priority;
-                    nodeToBeAdded->Priority = (nodeToBeAdded->Priority > 10) ? 10 : nodeToBeAdded->Priority;
-                    nodeToBeAdded->Priority = (nodeToBeAdded->Priority < 0) ? 0 : nodeToBeAdded->Priority;
-                    nodeToBeAdded->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
-                    nodeToBeAdded->Runtime = snt_Process_msg.Process.Runtime;
-                    Enqueue(Process_Queues_Arr[nodeToBeAdded->Priority], nodeToBeAdded);
-                }
-                else {
-                    FinishedProc++;
-                }
-            }
+            // if (rec_val != -1)
+            // {
+            //     if (snt_Process_msg.Process.Runtime){
+            //         struct Node* nodeToBeAdded = CreateNode();
+            //         nodeToBeAdded->PID = pid;
+            //         nodeToBeAdded->Priority = snt_Process_msg.Process.Priority;
+            //         nodeToBeAdded->Priority = (nodeToBeAdded->Priority > 10) ? 10 : nodeToBeAdded->Priority;
+            //         nodeToBeAdded->Priority = (nodeToBeAdded->Priority < 0) ? 0 : nodeToBeAdded->Priority;
+            //         nodeToBeAdded->Arrival_Time = snt_Process_msg.Process.ArrivalTime;
+            //         nodeToBeAdded->Runtime = snt_Process_msg.Process.Runtime;
+            //         Enqueue(Process_Queues_Arr[nodeToBeAdded->Priority], nodeToBeAdded);
+            //     }
+            //     else {
+            //         FinishedProc++;
+            //     }
+            // }
             if (CurrentPriority == -1) {
                 for (int i = 0; i <= 10; i++) {
                     node = Dequeue(Process_Queues_Arr[i]);

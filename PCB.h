@@ -28,7 +28,7 @@ struct PCB
     int pid;
     int MStart;
     int MEnd;
-    int MemS;
+    int MemSize;
 }PCB_def={0,0,0,0,-1,-1,-1, -1, 0};
 
 struct PCB* findPCB(int pid, struct PCB* ProcessTable){

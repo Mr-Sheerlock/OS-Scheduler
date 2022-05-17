@@ -6,7 +6,8 @@ int remainingtime;
 int running=0;
 void conthand()
 {
-     running=1;
+    printf("sigcont sent\n");
+    running=1;
 }
 
 int main(int agrc, char * argv[])
@@ -20,24 +21,25 @@ int main(int agrc, char * argv[])
 
     remainingtime = atoi(argv[1]);
     printf("clk in process = %d\n", getClk());
-    // if(remainingtime == 0)
-    // {
-    //     raise(SIGSTOP);
-    // }
+    if(remainingtime == 0)
+    {
+        raise(SIGSTOP);
+    }
     while (remainingtime > 0)
     {
-        // if(!running)
-        // {
-        //     raise(SIGSTOP);
-        // }
-        //else
-        //{
+        if(!running)
+        {
+            printf("Sigstop raised\n");
+            raise(SIGSTOP);
+        }
+        else
+        {
             int x = getClk();
             while(x==getClk()); //passes 1 second
 
             remainingtime--;
             printf("remaining time is %d\n ",remainingtime);
-        //}
+        }
     }
     kill(getppid(),SIGUSR1);
     

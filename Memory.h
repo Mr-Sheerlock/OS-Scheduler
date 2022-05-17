@@ -107,7 +107,7 @@ void Delete(struct Mem_List *Q, int S)
 
 bool IsEmptyList(struct Mem_List *Q)
 {
-    if(Q->Header->start == -1)
+    if(!Q->Header)
     {
         return true;
     }

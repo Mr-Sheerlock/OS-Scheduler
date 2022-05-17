@@ -27,13 +27,12 @@ struct PCB
     int id;
     int pid;
     int MStart;
-    int MEnd;
     int MemSize;
-}PCB_def={0,0,0,0,-1,-1,-1, -1, 0};
+}PCB_def={0,0,0,0,-1,-1,-1, 0};
 
 struct PCB* findPCB(int pid, struct PCB* ProcessTable){
     for(int i=0;i<Nprocesses;i++){
-        if(pid== ProcessTable[i].id){
+        if(pid== ProcessTable[i].pid){
             return &ProcessTable[i];
         }
     }

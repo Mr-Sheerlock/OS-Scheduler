@@ -79,12 +79,12 @@ int ReadInputFile(struct List * Queue,char*filename)
         if(!y){return 0;}
         y=fscanf(InputFile,"%d",&process->Priority);        
         if(!y){return 0;}
-        process->SchPriority=process->ArrivalTime;
 
-        if(!y){return 0;}
         y=fscanf(InputFile,"%d%*[^\n]\n",&process->MemS); 
+        if(!y){return 0;}
 
 
+        process->SchPriority=process->ArrivalTime;
         node->process=process;
         if (process->RunTime)
         {

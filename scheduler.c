@@ -26,6 +26,7 @@ struct PG_msgbuff
 
  FILE *logptr;
  FILE *perfptr;
+ FILE *memptr;
  // some variables used inside
  int Algorithm_type=0;
  int count = 0;
@@ -91,7 +92,15 @@ int rec_val, msgq_id;
 //     make; ./process_generator.out "testcase.txt" -sch 5 -q 2 &
 //FOR DEBUGGING : gdb --args ./Process_generator.out -g -sch 3 -q
 
-
+void printMemory()
+{
+    for (int i = 0; i < 8; i++)
+    {
+        printf("List %d, of size %.0f --> ", i, pow(2,i+3));
+        printList(AvailableMemory[i]);
+    }
+    printf("---------------------------------\n");
+}
 
 bool Allocate(struct Mem_List *M)
 {
@@ -114,7 +123,6 @@ bool Allocate(struct Mem_List *M)
         // WaitingNode->Arrival_Time =;
     
         remaining_time = WaitingNode->Runtime;
-        printf("Remaining time = %d\n", remaining_time);
 
         //fork
         pid = fork();
@@ -198,6 +206,12 @@ bool Allocate(struct Mem_List *M)
         //delete from Avaialable
         //delete the first element
         Delete(M,start);
+
+        /////////////*******/////////////
+        printf("---- Allocate \n");
+        printMemory();
+        /////////////*******/////////////
+
         return true;
 
     //print "memory allocated" in memory.log
@@ -214,7 +228,6 @@ bool Allocate(struct Mem_List *M)
 //Phase 2
 bool Try2Allocate()
 {
-    //printf("inside allocation\n");
     if(!Peek(WaitingQ)) //waiting list is empty
     {
         return false;
@@ -223,7 +236,6 @@ bool Try2Allocate()
     // int size = TempProcess->MemS;
     WaitingNode=Peek(WaitingQ);
     int size = WaitingNode->MemS;
-    printf("Size= %d\n", size);
     //Calculate closest power of 2
     int power = 0;
     for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
@@ -234,16 +246,13 @@ bool Try2Allocate()
             break;
         }
     }
-    //size = pow(2, power);
-    printf("Power of 2: %d\n", power);
 
     power= power-3; //because our array is shifted
     //Find free memory 
     
     //0-->8, 1--> 16, 2-->32, 3-->64, 4-->128, 5-->256, 6-->512, 7-->1024
-
+    int start=(AvailableMemory[power]->Header)?AvailableMemory[power]->Header->start:0;
     if (IsEmptyList(AvailableMemory[power])){
-        printf("arr[%d] is empty\n", power);
         int c=power+1;
         for (c;c < 8; c++)
         {
@@ -255,30 +264,29 @@ bool Try2Allocate()
         }
         //if there is no free memory
         if(c==8){
-            printf("no free memory");
             return false;
         }
         //now we start dividing 
         while(c!=power){
-            int start=AvailableMemory[c]->Header->start; 
+            start=AvailableMemory[c]->Header->start; 
             Delete(AvailableMemory[c],start);
-            printf("start %d deleted from arr[%d]\n", start, c);
             struct Mem_Node * lowerMemNode = CreateMem_Node();
             lowerMemNode->start=start;
             c--;
             Insert(AvailableMemory[c],lowerMemNode);
-            printf("start %d inserted from arr[%d]\n", lowerMemNode->start, c);
 
             lowerMemNode=CreateMem_Node();
             lowerMemNode->start=start+pow(2, c+3);
             Insert(AvailableMemory[c],lowerMemNode);
-            printf("start %d inserted from arr[%d]\n", lowerMemNode->start, c);
-   
-            printf("%d: ", c);
-            printList(AvailableMemory[c]);
         }
     }
-    
+    //fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(), (int)pow(2,power+3), WaitingNode->id,start,start+(int)pow(2,power+3));
+    fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),size , WaitingNode->id,start,start+(int)pow(2,power+3));
+
+    /////////////*******/////////////
+    printf("----Try To Allocate \n");
+    printMemory();
+    /////////////*******/////////////
     return Allocate(AvailableMemory[power]);
     
     //print "memory allocated" in memory.log
@@ -289,6 +297,7 @@ bool Try2Allocate()
 
 void Merge(int c)
 {
+    printf("Inside Merge with c = %d\n", c);
     if(c == 7)
     {
         return;
@@ -311,9 +320,9 @@ void Merge(int c)
                 break;
             }
         }
+        ptr = ptr->Next;
     }
     ///
-
     if (merge == false)
     {
         return;
@@ -326,14 +335,14 @@ void Merge(int c)
     TempNode->start = start1;
 
     Insert(AvailableMemory[c+1], TempNode);
-    printf("merge: %d: ", c);
-    printList(AvailableMemory[c]);
-    printf("Merge: %d: ", c+1);
-    printList(AvailableMemory[c+1]);
+    /////////////*******/////////////
+    printf("----Merge \n");
+    printMemory();
+    /////////////*******/////////////
     Merge(c+1);
 }
 
-void Deallocate(int StartAdd, int size)
+void Deallocate(int StartAdd, int size, int id)
 {
     //free the memory
     int power = 0;
@@ -345,18 +354,21 @@ void Deallocate(int StartAdd, int size)
             break;
         }
     }
-    printf("power in deallocation: %d\n", power);
     power -= 3;
     struct Mem_Node* TempNode;
     TempNode = CreateMem_Node();
     TempNode->start = StartAdd;
     Insert(AvailableMemory[power], TempNode);
 
-    printf("deall: %d: ", power);
-    printList(AvailableMemory[power]);
+    /////////////*******/////////////
+    printf("----Deallocate \n");
+    printMemory();
+    /////////////*******/////////////
 
     //merge if possible
     Merge(power);
+    //fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), (int)pow(2,power+3), id,StartAdd,StartAdd+(int)pow(2,power+3));
+    fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), size, id,StartAdd,StartAdd+(int)pow(2,power+3));
     //dequeing from ready queue, deleting entry in pcb, printing "memory freed" in memor.log --> in algorithm ??
 }
 
@@ -379,8 +391,6 @@ int main(int argc, char *argv[])
     struct Mem_Node* Init_Node = CreateMem_Node();
     Init_Node->start = 0;
     Insert(AvailableMemory[7], Init_Node);
-
-    printList(AvailableMemory[7]);
 
     // initialization from ProcessGenerator:
     Algorithm_type= atoi(argv[1]);   // 1 SFJ 2 HPF 3 RR 4 MultilevelQ
@@ -430,6 +440,7 @@ int main(int argc, char *argv[])
    
 	logptr = fopen("scheduler.log", "w");
 	//perfptr = fopen("scheduler.perf", "w");
+    memptr = fopen("memory.log", "w");
 
     // TODO implement the scheduler :)
     //     1.Start a new process whenever it arrives. (Fork it and give it its parameters)
@@ -469,7 +480,10 @@ int main(int argc, char *argv[])
         //phase 2 
         //** WE SHOULD CHANGE THE POSITIONING TO ACCOMODATE FOR EVERY ALGORITHM 
         // BUT WE LEAVE IT HERE FOR NOW 
-        while(Try2Allocate());  //loop over it 
+        while(Try2Allocate())  //loop over it 
+        {
+            printpcb(ProcessTable);
+        }
 
 
         // 2.Switch between two processes according to the scheduling algorithm. (stop
@@ -629,6 +643,7 @@ int main(int argc, char *argv[])
                     printf("Finished!!!\n");
                     PQ_node = DePQueue(Process_PQueue);
                     temp = findPCB(PQ_node->PID, ProcessTable);
+                    Deallocate(temp->MStart,temp->MemSize, temp->id);
                     // temp->execution_time += getClk() - Start_Time;
                     // temp->remaining_time -= getClk() - Start_Time;
                     fprintf(logptr, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->waiting_time, getClk() - PQ_node->Arrival_Time, (float)(getClk() - PQ_node->Arrival_Time) / temp->execution_time);
@@ -1036,6 +1051,7 @@ int main(int argc, char *argv[])
     else if (Algorithm_type == 2) // HPF
     {
         fclose(logptr);
+        fclose(memptr);
         free(Process_PQueue);
     }
     else if (Algorithm_type == 3) // RR
@@ -1063,13 +1079,16 @@ void finish_SJF()
     int TA = getClk() - ArrivalTime;
     float WTA = (TA * 1.0) / (pcb->execution_time);
 
-    Deallocate(pcb->MStart, pcb->MemSize);
 
     //print in output file
     logptr = fopen("scheduler.log", "a");
     fprintf(logptr, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), pcb->id, ArrivalTime, pcb->execution_time, 0, pcb->waiting_time, TA, WTA);
     fclose(logptr);
-    
+    printf("Memory start = %d, MemSize = %d\n", pcb->MStart, pcb->MemSize);
+    Deallocate(pcb->MStart, pcb->MemSize, pcb->id);
+
+    printf("Process %d terminated at time %d\n", pcb->id, getClk());
+
     //delet entry in pcb
     Total_WTA += WTA;
     pcb->execution_time = 0;

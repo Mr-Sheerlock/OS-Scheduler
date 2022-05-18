@@ -281,9 +281,6 @@ bool Try2Allocate()
             Insert(AvailableMemory[c],lowerMemNode);
         }
     }
-<<<<<<< HEAD
-    fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(), (int)pow(2,power+3), WaitingNode->id,start,start+(int)pow(2,power+3));
-=======
     //fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(), (int)pow(2,power+3), WaitingNode->id,start,start+(int)pow(2,power+3));
     fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),size , WaitingNode->id,start,start+((int)pow(2,power+3))-1);
 
@@ -291,7 +288,6 @@ bool Try2Allocate()
     printf("----Try To Allocate \n");
     printMemory();
     /////////////*******/////////////
->>>>>>> aecb07ab0950502d1317848c3039ef678643e6de
     return Allocate(AvailableMemory[power]);
     
     //print "memory allocated" in memory.log
@@ -325,11 +321,7 @@ void Merge(int c)
                 break;
             }
         }
-<<<<<<< HEAD
-        ptr=ptr->Next;
-=======
         ptr = ptr->Next;
->>>>>>> aecb07ab0950502d1317848c3039ef678643e6de
     }
     ///
     if (merge == false)
@@ -376,12 +368,8 @@ void Deallocate(int StartAdd, int size, int id)
 
     //merge if possible
     Merge(power);
-<<<<<<< HEAD
-    fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), (int)pow(2,power+3), temp->id/*/TO BE CHANGED*/,StartAdd,StartAdd+(int)pow(2,power+3));
-=======
     //fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), (int)pow(2,power+3), id,StartAdd,StartAdd+(int)pow(2,power+3));
     fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), size, id,StartAdd,StartAdd+(int)(pow(2,power+3)-1));
->>>>>>> aecb07ab0950502d1317848c3039ef678643e6de
     //dequeing from ready queue, deleting entry in pcb, printing "memory freed" in memor.log --> in algorithm ??
 }
 
@@ -453,11 +441,7 @@ int main(int argc, char *argv[])
    
 	logptr = fopen("scheduler.log", "w");
 	//perfptr = fopen("scheduler.perf", "w");
-<<<<<<< HEAD
-	memptr = fopen("memory.log", "w");
-=======
     memptr = fopen("memory.log", "w");
->>>>>>> aecb07ab0950502d1317848c3039ef678643e6de
 
     // TODO implement the scheduler :)
     //     1.Start a new process whenever it arrives. (Fork it and give it its parameters)
@@ -660,13 +644,9 @@ int main(int argc, char *argv[])
                     printf("Finished!!!\n");
                     PQ_node = DePQueue(Process_PQueue);
                     temp = findPCB(PQ_node->PID, ProcessTable);
-<<<<<<< HEAD
-                    Deallocate(temp->MStart,temp->MemSize);
-=======
                     
                     Deallocate(temp->MStart,temp->MemSize, temp->id);
                     
->>>>>>> aecb07ab0950502d1317848c3039ef678643e6de
                     // temp->execution_time += getClk() - Start_Time;
                     // temp->remaining_time -= getClk() - Start_Time;
                     fprintf(logptr, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), temp->id, PQ_node->Arrival_Time, temp->execution_time + temp->remaining_time, temp->waiting_time, getClk() - PQ_node->Arrival_Time, (float)(getClk() - PQ_node->Arrival_Time) / temp->execution_time);

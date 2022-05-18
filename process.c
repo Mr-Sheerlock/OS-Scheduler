@@ -6,7 +6,7 @@ int remainingtime;
 int running=0;
 void conthand()
 {
-    printf("sigcont sent\n");
+    //printf("sigcont sent\n");
     running=1;
 }
 
@@ -20,7 +20,7 @@ int main(int agrc, char * argv[])
     //TODO it needs to get the remaining time from somewhere
 
     remainingtime = atoi(argv[1]);
-    printf("clk in process = %d\n", getClk());
+    //printf("clk in process = %d\n", getClk());
     if(remainingtime == 0)
     {
         raise(SIGSTOP);
@@ -29,7 +29,7 @@ int main(int agrc, char * argv[])
     {
         if(!running)
         {
-            printf("Sigstop raised\n");
+            //printf("Sigstop raised\n");
             raise(SIGSTOP);
         }
         else

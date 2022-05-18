@@ -55,3 +55,22 @@ void updateWaiting(struct PCB* pcb){
             pcb[i].waiting_time+=1;
     }
 }
+
+
+void printpcb(struct PCB* pcb)
+{
+    printf("-------- PCB --------\n");
+    if(isPCBempty(pcb))
+    {
+        printf("PCB empty\n");
+        return;
+    }
+    for(int i=0;i<Nprocesses;i++)
+    {
+        if(pcb[i].pid==-1)
+        {
+            continue;
+        }
+        printf("Id = %d, Start Add = %d\n", pcb[i].id, pcb[i].MStart);
+    }
+}

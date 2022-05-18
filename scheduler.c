@@ -458,6 +458,7 @@ int main(int argc, char *argv[])
     while (1 && !finish)
     {
         //recieve message
+        usleep(700);
         rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(struct proc), 2, IPC_NOWAIT);
         if (rec_val != -1)
         {   

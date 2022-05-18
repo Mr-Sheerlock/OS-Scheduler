@@ -238,15 +238,16 @@ bool Try2Allocate()
     WaitingNode=Peek(WaitingQ);
     int size = WaitingNode->MemS;
     //Calculate closest power of 2
-    int power = 0;
-    for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
-    {
-        if(pow(2, i) >= size)
-        {
-            power = i;
-            break;
-        }
-    }
+    int power = (int)ceil(log2(size));
+    // int power = 0;
+    // for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
+    // {
+    //     if(pow(2, i) >= size)
+    //     {
+    //         power = i;
+    //         break;
+    //     }
+    // }
 
     power= power-3; //because our array is shifted
     //Find free memory 
@@ -346,15 +347,16 @@ void Merge(int c)
 void Deallocate(int StartAdd, int size, int id)
 {
     //free the memory
-    int power = 0;
-    for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
-    {
-        if(pow(2, i) >= size)
-        {
-            power = i;
-            break;
-        }
-    }
+    int power = (int)ceil(log2(size));
+    // int power = 0;
+    // for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
+    // {
+    //     if(pow(2, i) >= size)
+    //     {
+    //         power = i;
+    //         break;
+    //     }
+    // }
     power -= 3;
     struct Mem_Node* TempNode;
     TempNode = CreateMem_Node();

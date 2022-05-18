@@ -282,7 +282,7 @@ bool Try2Allocate()
         }
     }
     //fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(), (int)pow(2,power+3), WaitingNode->id,start,start+(int)pow(2,power+3));
-    fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),size , WaitingNode->id,start,start+(int)pow(2,power+3));
+    fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),size , WaitingNode->id,start,start+((int)pow(2,power+3))-1);
 
     /////////////*******/////////////
     printf("----Try To Allocate \n");
@@ -369,7 +369,7 @@ void Deallocate(int StartAdd, int size, int id)
     //merge if possible
     Merge(power);
     //fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), (int)pow(2,power+3), id,StartAdd,StartAdd+(int)pow(2,power+3));
-    fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), size, id,StartAdd,StartAdd+(int)pow(2,power+3));
+    fprintf(memptr, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(), size, id,StartAdd,StartAdd+(int)(pow(2,power+3)-1));
     //dequeing from ready queue, deleting entry in pcb, printing "memory freed" in memor.log --> in algorithm ??
 }
 

@@ -212,7 +212,7 @@ bool Allocate(struct Mem_List *M)
         if(M)
         {
             Delete(M,start);
-
+        }
         /////////////*******/////////////
         // printf("---- Allocate \n");
         // printMemory();

@@ -106,10 +106,13 @@ bool Allocate(struct Mem_List *M)
 {
     //add in pcb and ready queues
     //remove free memory address from the buddy lists
-    if(!IsEmptyList(M)){
-
-        //remove from waiting queue 
-        int start =M->Header->start;
+    if(!M||!IsEmptyList(M)){
+        int start=0;
+        //remove from waiting queue
+        if(M)
+        { 
+            start =M->Header->start;
+        }
         Dequeue(WaitingQ);
         //add in pcb and ready queue
         ProcessTable[count].id=WaitingNode->id;
@@ -206,12 +209,15 @@ bool Allocate(struct Mem_List *M)
 
         //delete from Avaialable
         //delete the first element
-        Delete(M,start);
+        if(M)
+        {
+            Delete(M,start);
 
-        /////////////*******/////////////
-        printf("---- Allocate \n");
-        printMemory();
-        /////////////*******/////////////
+            /////////////*******/////////////
+            printf("---- Allocate \n");
+            printMemory();
+            /////////////*******/////////////
+        }
 
         return true;
 
@@ -237,9 +243,17 @@ bool Try2Allocate()
     // int size = TempProcess->MemS;
     WaitingNode=Peek(WaitingQ);
     int size = WaitingNode->MemS;
+    if(!size){return Allocate(NULL);}
     //Calculate closest power of 2
     int power = (int)ceil(log2(size));
-    power= power-3; //because our array is shifted
+    if(power>=3)
+    {
+        power= power-3; //because our array is shifted
+    }
+    else
+    {
+        power=0;
+    }
     //Find free memory 
     
     //0-->8, 1--> 16, 2-->32, 3-->64, 4-->128, 5-->256, 6-->512, 7-->1024
@@ -338,8 +352,16 @@ void Merge(int c)
 void Deallocate(int StartAdd, int size, int id)
 {
     //free the memory
+    if(!size){return;}
     int power = (int)ceil(log2(size));
-    power -= 3;
+    if(power>=3)
+    {
+        power= power-3; //because our array is shifted
+    }
+    else
+    {
+        power=0;
+    }
     struct Mem_Node* TempNode;
     TempNode = CreateMem_Node();
     TempNode->start = StartAdd;

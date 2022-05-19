@@ -209,8 +209,8 @@ bool Allocate(struct Mem_List *M)
         Delete(M,start);
 
         /////////////*******/////////////
-        printf("---- Allocate \n");
-        printMemory();
+        // printf("---- Allocate \n");
+        // printMemory();
         /////////////*******/////////////
 
         return true;
@@ -276,8 +276,8 @@ bool Try2Allocate()
     fprintf(memptr, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),size , WaitingNode->id,start,start+((int)pow(2,power+3))-1);
 
     /////////////*******/////////////
-    printf("----Try To Allocate \n");
-    printMemory();
+    // printf("----Try To Allocate \n");
+    // printMemory();
     /////////////*******/////////////
     return Allocate(AvailableMemory[power]);
     
@@ -289,7 +289,7 @@ bool Try2Allocate()
 
 void Merge(int c)
 {
-    printf("Inside Merge with c = %d\n", c);
+    //printf("Inside Merge with c = %d\n", c);
     if(c == 7)
     {
         return;
@@ -304,6 +304,7 @@ void Merge(int c)
     while(ptr->Next)
     {
         int start1index = start1/((int)pow(2,c+3));
+        //printf("start indx = %d\n", start1index);
         if(start1index%2 == 0)
         {
             start2 = ptr->Next->start;
@@ -314,6 +315,7 @@ void Merge(int c)
             }
         }
         ptr = ptr->Next;
+        start1 = ptr->start;
     }
     ///
     if (merge == false)
@@ -1003,6 +1005,7 @@ int main(int argc, char *argv[])
 
     // (b) Scheduler.perf 
     barra:
+    //printMemory();
     perfptr = fopen("scheduler.perf", "w");
     printf("I wenta barraaa\n");
     fprintf(perfptr,"CPU Utilization = %.2f%%\n",((float)Total_Execution_Time*100/getClk()));    

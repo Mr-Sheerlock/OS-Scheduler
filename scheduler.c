@@ -303,7 +303,8 @@ void Merge(int c)
     start1 = ptr->start;
     while(ptr->Next)
     {
-        if(start1%2 == 0)
+        int start1index = start1/((int)pow(2,c+3));
+        if(start1index%2 == 0)
         {
             start2 = ptr->Next->start;
             if(start2-start1 == pow(2, c+3))
@@ -953,7 +954,7 @@ int main(int argc, char *argv[])
                             fprintf(logptr, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, 0, pcb->waiting_time, getClk() - node->Arrival_Time, (float)(getClk() - node->Arrival_Time) / pcb->execution_time);
                             Total_WTA += (float)(getClk() - node->Arrival_Time) / pcb->execution_time;
                             Total_Waiting_Time += pcb->waiting_time;
-                            // Deallocate(pcb->MStart, pcb->MemSize, pcb->id);
+                            Deallocate(pcb->MStart, pcb->MemSize, pcb->id);
                             // Delete data
                             pcb->execution_time = 0;
                             pcb->remaining_time = 0;
@@ -970,6 +971,7 @@ int main(int argc, char *argv[])
                         node = NULL;
                         pcb = NULL;
                         CurrentPriority = -1;
+                        usleep(1500);
                     }
                 }
             }
@@ -1027,6 +1029,7 @@ int main(int argc, char *argv[])
     }
     else if (Algorithm_type == 4) // MultilevelQ
     {
+        fclose(memptr);
         fclose(logptr);
         for (int i = 0; i < 12; i++) free(Process_Queues_Arr[i]);
     }

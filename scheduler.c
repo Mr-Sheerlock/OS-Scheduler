@@ -239,16 +239,6 @@ bool Try2Allocate()
     int size = WaitingNode->MemS;
     //Calculate closest power of 2
     int power = (int)ceil(log2(size));
-    // int power = 0;
-    // for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
-    // {
-    //     if(pow(2, i) >= size)
-    //     {
-    //         power = i;
-    //         break;
-    //     }
-    // }
-
     power= power-3; //because our array is shifted
     //Find free memory 
     
@@ -313,7 +303,8 @@ void Merge(int c)
     start1 = ptr->start;
     while(ptr->Next)
     {
-        if(start1%2 == 0)
+        int start1index = start1/((int)pow(2,c+3));
+        if(start1index%2 == 0)
         {
             start2 = ptr->Next->start;
             if(start2-start1 == pow(2, c+3))
@@ -348,15 +339,6 @@ void Deallocate(int StartAdd, int size, int id)
 {
     //free the memory
     int power = (int)ceil(log2(size));
-    // int power = 0;
-    // for (int i = 3; i < 11; i++) //starting from power of 3 (8) to power of 10 (1024)
-    // {
-    //     if(pow(2, i) >= size)
-    //     {
-    //         power = i;
-    //         break;
-    //     }
-    // }
     power -= 3;
     struct Mem_Node* TempNode;
     TempNode = CreateMem_Node();
@@ -973,7 +955,7 @@ int main(int argc, char *argv[])
                             fprintf(logptr, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n", getClk(), pcb->id, node->Arrival_Time, node->Runtime, 0, pcb->waiting_time, getClk() - node->Arrival_Time, (float)(getClk() - node->Arrival_Time) / pcb->execution_time);
                             Total_WTA += (float)(getClk() - node->Arrival_Time) / pcb->execution_time;
                             Total_Waiting_Time += pcb->waiting_time;
-                            // Deallocate(pcb->MStart, pcb->MemSize, pcb->id);
+                            Deallocate(pcb->MStart, pcb->MemSize, pcb->id);
                             // Delete data
                             pcb->execution_time = 0;
                             pcb->remaining_time = 0;
@@ -990,6 +972,7 @@ int main(int argc, char *argv[])
                         node = NULL;
                         pcb = NULL;
                         CurrentPriority = -1;
+                        usleep(1500);
                     }
                 }
             }
@@ -1047,6 +1030,7 @@ int main(int argc, char *argv[])
     }
     else if (Algorithm_type == 4) // MultilevelQ
     {
+        fclose(memptr);
         fclose(logptr);
         for (int i = 0; i < 12; i++) free(Process_Queues_Arr[i]);
     }

@@ -440,7 +440,6 @@ int main(int argc, char *argv[])
     while (1 && !finish)
     {
         //recieve message
-        usleep(700);
         rec_val = msgrcv(msgq_id, &snt_Process_msg, sizeof(struct proc), 2, IPC_NOWAIT);
         if (rec_val != -1)
         {   
@@ -646,7 +645,10 @@ int main(int argc, char *argv[])
                     temp->id = -1;
                     temp->pid = -1;
                     if (Process_PQueue->Header)
+                    {
                         pcb = findPCB(Process_PQueue->Header->PID, ProcessTable);
+                    }
+                    usleep(1000);
                     // {
                     //     pcb->state = 1;
                     //     PQ_node=PPeek(Process_PQueue);
